@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="hrIsuc">
+
+	<select id="gethrIsucCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM HR_ISUC
+		WHERE 1 = 1
+	</select>
+	
+	<select id="gethrIsucList" resultType="hashmap">
+		SELECT H.ISUC_NO,H.EMP_NO,H.DEPT_NO,H.POSN_NO,H.START_DATE , H.END_DATE,  H.REGISTER_DATE, H.STATE
+		FROM ( SELECT H.ISUC_NO, E.EMP_NO, D.DEPT_NO, P.POSN_NO , TO_CHAR(START_DATE, 'YYYY-MM-DD') AS START_DATE , 
+		TO_CHAR(END_DATE, 'YYYY-MM-DD') AS END_DATE,  TO_CHAR(SYSDATE, 'YYYY-MM-DD') AS REGISTER_DATE,
+		DECODE(STATE, 0, '휴가', 1, '근무', 2, '대기') AS STATE,
+              		  ROW_NUMBER() OVER(ORDER BY ISUC_NO ASC) AS RNUM
+		      FROM HR_ISUC H INNER JOIN EMP E
+		                              ON H.EMP_NO = E.EMP_NO
+		                      INNER JOIN DEPT D
+		                              ON H.DEPT_NO = D.DEPT_NO
+		                      INNER JOIN POSN P
+		                              ON H.POSN_NO = P.POSN_NO
+		      WHERE 1 = 1 
+		      <if test="searchTxt != null and searchTxt != ''">
+				  <choose>
+					  <when test="searchGbn eq 0">
+						  AND H.ISUC_NO LIKE '%' || #{searchTxt} || '%'
+					  </when>				
+					  <when test="searchGbn eq 1">
+					  	  AND H.EMP_NO LIKE '%' || #{searchTxt} || '%'
+					  </when>
+				  </choose>
+			  </if>
+		      ) H
+		WHERE H.RNUM BETWEEN #{startCnt} AND #{endCnt}
+		ORDER BY ISUC_NO ASC
+	</select>
+	
+	<select id = "gethrIsucDetailCont" parameterType = "hashmap" resultType = "hashmap">
+	    SELECT ISUC_NO, EMP_NO, DEPT_NO, POSN_NO , TO_CHAR(START_DATE, 'YYYY-MM-DD') AS START_DATE , 
+		TO_CHAR(END_DATE, 'YYYY-MM-DD') AS END_DATE,  TO_CHAR(SYSDATE, 'YYYY-MM-DD') AS REGISTER_DATE,
+		DECODE(STATE, 0, '휴가', 1, '근무', 2, '대기') AS STATE
+		FROM HR_ISUC
+		WHERE 1 = 1
+		AND ISUC_NO = #{hrIsuc_no}
+	</select>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="chan">
+	<select id="getChanCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CHAN
+		WHERE 1=1 AND DEL_WHET = 0
+		<if test="channelTypeSelect != 0">
+			AND CHAN_TYPE_NO = #{channelTypeSelect}
+		</if>
+		<if test="supplySubcSelect != 0">
+			AND SUPL_SUBC_NO = #{supplySubcSelect}
+		</if>
+		<if test="supplyTypeSelect != 0">
+			AND COTR_TYPE_NO = #{supplyTypeSelect}
+		</if>
+		<if test="ChanStartDate != '' ">
+			AND  #{ChanStartDate} &gt;= COTR_START_PERD   
+		</if>
+		<if test="ChanEndDate != ''">
+			AND #{ChanEndDate} &lt;= COTR_END_PERD
+		</if>
+			<if test="supply_unpr !=''">
+			AND UNPR &lt;= #{supply_unpr}
+		</if>
+	</select>
+	
+	<select id="getChan" parameterType="hashmap" resultType="hashmap">
+	SELECT M.CHAN_NM ,M.CHAN_NO ,M.CHAN_TYPE , M.SUBC_NM , M.COTR_TYPE_NM , M.UNPR , M.COTR_START_PERD , M.COTR_END_PERD
+	FROM(SELECT C1.CHAN_NM AS CHAN_NM ,C1.CHAN_NO AS CHAN_NO , C2.CHAN_TYPE AS CHAN_TYPE, S1.SUBC_NM  AS SUBC_NM, C3.COTR_TYPE_NM  AS COTR_TYPE_NM, C1.UNPR AS UNPR, TO_CHAR(C1.COTR_START_PERD,'YYYY-MM-DD') AS COTR_START_PERD,
+                TO_CHAR(C1.COTR_END_PERD,'YYYY-MM-DD') AS COTR_END_PERD , 	ROW_NUMBER() OVER(ORDER BY C1.CHAN_NO DESC) AS RNUM
+	FROM CHAN C1 INNER JOIN CHAN_TYPE C2
+                ON C1.CHAN_TYPE_NO = C2.CHAN_TYPE_NO
+             INNER JOIN SUPL_SUBC S1
+                ON C1.SUPL_SUBC_NO = S1.SUPL_SUBC_NO
+             INNER JOIN COTR_TYPE C3
+                ON C1.COTR_TYPE_NO = C3.COTR_TYPE_NO
+    WHERE 1=1 AND C1.DEL_WHET = 0
+  	<if test="channelTypeSelect != 0">
+			AND C1.CHAN_TYPE_NO = #{channelTypeSelect}
+		</if>
+		<if test="supplySubcSelect != 0">
+			AND C1.SUPL_SUBC_NO = #{supplySubcSelect}
+		</if>
+		<if test="supplyTypeSelect != 0">
+			AND C1.COTR_TYPE_NO = #{supplyTypeSelect}
+		</if>
+		<if test="ChanStartDate != '' ">
+			AND  #{ChanStartDate} &gt;= COTR_START_PERD   
+		</if>
+		<if test="ChanEndDate != ''">
+			AND #{ChanEndDate} &lt;= COTR_END_PERD
+		</if>
+		<if test="supply_unpr !=''">
+			AND UNPR &lt;= #{supply_unpr}
+		</if>
+              ) M
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getChanType" resultType="hashmap" parameterType="hashmap">
+	SELECT CHAN_TYPE_NO , CHAN_TYPE
+	FROM CHAN_TYPE
+	WHERE 1=1 AND DEL_WHET = 0
+	
+	</select>
+	<select id="getsupplySubcSelect" resultType="hashmap" parameterType="hashmap">
+	SELECT SUPL_SUBC_NO , SUBC_NM
+	FROM SUPL_SUBC
+	WHERE 1=1
+	</select>
+	<select id="getsupplyType" resultType="hashmap" parameterType="hashmap">
+	SELECT COTR_TYPE_NO , COTR_TYPE_NM
+	FROM COTR_TYPE
+	WHERE 1=1
+	</select>
+	<insert id="chanAdd" parameterType="hashmap">
+		INSERT INTO CHAN(CHAN_NO,CHAN_TYPE_NO , COTR_TYPE_NO,EMP_NO,CHAN_NM<if test="supplyTypeSelectAdd ==2">,COTR_START_PERD, COTR_END_PERD</if>,UNPR,SUPL_SUBC_NO<if test="supplyTypeSelectAdd == 1">,SUPL_CNT</if>)
+		VALUES(CHAN_SEQ.NEXTVAL,#{channelTypeSelectAdd} , #{supplyTypeSelectAdd} , #{sMno} , #{chanNM}<if test="supplyTypeSelectAdd ==2">,#{startDate},#{endDate}</if> , #{UNPR},#{supplySubcSelectAdd} <if test="supplyTypeSelectAdd == 1">,#{supplyCnt}</if>)
+	</insert>
+	<select id="getChanDetail" parameterType="hashmap" resultType="hashmap">
+	SELECT C1.CHAN_NM , C2.CHAN_TYPE , S1.SUBC_NM,C3.COTR_TYPE_NM,C1.UNPR,TO_CHAR(C1.COTR_START_PERD,'YYYY-MM-DD') AS COTR_START_PERD,TO_CHAR(C1.COTR_END_PERD,'YYYY-MM-DD') AS COTR_END_PERD,C1.SUPL_CNT,
+			C1.CHAN_TYPE_NO,C1.COTR_TYPE_NO,C1.SUPL_SUBC_NO
+	FROM CHAN C1 INNER JOIN CHAN_TYPE C2
+            ON C1.CHAN_TYPE_NO = C2.CHAN_TYPE_NO
+            INNER JOIN COTR_TYPE C3
+            ON C1.COTR_TYPE_NO = C3.COTR_TYPE_NO
+            INNER JOIN SUPL_SUBC S1
+            ON C1.SUPL_SUBC_NO = S1.SUPL_SUBC_NO
+	WHERE C1.CHAN_NO = #{chanNo}
+	</select>
+	<update id="ChanUpdate" parameterType="hashmap">
+		UPDATE CHAN SET CHAN_NM = #{chanNM},
+                CHAN_TYPE_NO = #{channelTypeSelectAdd},
+                COTR_TYPE_NO=#{supplyTypeSelectAdd},
+                <if test="supplyTypeSelectAdd ==2">
+                COTR_START_PERD=#{startDate},
+                COTR_END_PERD=#{endDate},
+                SUPL_CNT='',
+                </if>
+                UNPR= #{UNPR},
+                SUPL_SUBC_NO=#{supplySubcSelectAdd}
+                <if test="supplyTypeSelectAdd == 1">
+                ,COTR_START_PERD='',
+                COTR_END_PERD='',
+                SUPL_CNT=#{supplyCnt}
+                </if>
+      WHERE CHAN_NO = #{chanNo2}
+	</update>
+	<update id="ChanDelete" parameterType="hashmap">
+		UPDATE CHAN SET DEL_WHET = '1'
+		WHERE CHAN_NO = #{chanNo2}
+	</update>
+	<select id="getEtcList" parameterType="hashmap" resultType="hashmap">
+		SELECT CHAN_TYPE_NO , CHAN_TYPE
+		FROM CHAN_TYPE
+		WHERE DEL_WHET = 0
+		ORDER BY CHAN_TYPE_NO 
+		
+	</select>
+	<select id="getEtcListCotr" parameterType="hashmap" resultType="hashmap">
+		SELECT COTR_TYPE_NO , COTR_TYPE_NM
+		FROM COTR_TYPE
+		ORDER BY COTR_TYPE_NO 
+	</select>
+	<select id="getEtcListSupl" parameterType="hashmap" resultType="hashmap">
+		SELECT SUPL_SUBC_NO , SUBC_NM
+		FROM SUPL_SUBC
+		ORDER BY SUPL_SUBC_NO 
+	</select>
+	<update id="deleteEtcChanType" parameterType="hashmap">
+	UPDATE CHAN_TYPE SET DEL_WHET = 1
+	WHERE CHAN_TYPE = #{etcAddNm}
+	</update>
+	<delete id="deleteEtcCotr" parameterType="hashmap">
+	DELETE FROM COTR_TYPE
+	WHERE COTR_TYPE_NM = #{etcAddNm}
+	</delete>
+	<delete id="deleteEtcSupl" parameterType="hashmap">
+	DELETE FROM SUPL_SUBC
+	WHERE SUBC_NM = #{etcAddNm}
+	</delete>
+	<insert id="addEtcChanType" parameterType="hashmap">
+		INSERT INTO CHAN_TYPE(CHAN_TYPE_NO , CHAN_TYPE)
+		VALUES(CHAN_TYPE_SEQ.NEXTVAL,#{etcAddNm})
+	</insert>
+	<insert id="addEtcCotr" parameterType="hashmap">
+		INSERT INTO COTR_TYPE(COTR_TYPE_NO , COTR_TYPE_NM)
+		VALUES(COTR_TYPE_SEQ.NEXTVAL , #{etcAddNm})
+	</insert>
+	<insert id="addEtcSupl" parameterType="hashmap">
+		INSERT INTO SUPL_SUBC(SUPL_SUBC_NO , SUBC_NM)
+		VALUES(SUPL_SUBC_SEQ.NEXTVAL , #{etcAddNm})
+	</insert>
+</mapper> 
+
+
+
+
+
+
+

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="vactcode">
+	<select id="getVactCodeCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM VACT_CODE_MANG
+		WHERE 1 = 1
+		AND DEL_WHET = 0
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND VACT_CODE_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND VACT_CODE_EXPN LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getVactCodeList" resultType="hashmap">
+		SELECT V.VACT_CODE_NO, V.VACT_CODE_NM, V.VACT_CODE_EXPN
+		FROM ( SELECT VACT_CODE_NO, VACT_CODE_NM, VACT_CODE_EXPN,
+              		  ROW_NUMBER() OVER(ORDER BY VACT_CODE_NO ASC) AS RNUM
+       		   FROM VACT_CODE_MANG
+       		   WHERE 1 = 1
+       		   AND DEL_WHET = 0
+			   <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND VACT_CODE_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND VACT_CODE_EXPN LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+			  ) V
+		WHERE V.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id="getVactCodeDetailCont" parameterType="hashmap" resultType="hashmap">
+		SELECT VACT_CODE_NO, VACT_CODE_NM, VACT_CODE_EXPN
+		FROM VACT_CODE_MANG
+		WHERE 1 = 1
+		AND DEL_WHET = 0
+		AND VACT_CODE_NO = #{vact_code_no}
+	</select>
+	<insert id="vactCodeAdd" parameterType="hashmap">
+		INSERT INTO VACT_CODE_MANG(VACT_CODE_NO, VACT_CODE_NM, VACT_CODE_EXPN)
+		VALUES(VACT_CODE_MANG_SEQ.NEXTVAL, #{vact_code_nm1}, #{vact_code_expn1})
+	</insert>
+	<update id="vactCodeUpdate" parameterType="hashmap">
+		UPDATE VACT_CODE_MANG SET VACT_CODE_NM = #{vact_code_nm2},
+								  VACT_CODE_EXPN = #{vact_code_expn2}
+		WHERE VACT_CODE_NO = #{vact_code_no}
+	</update>
+	<update id="vactCodeDelete" parameterType="hashmap">
+		UPDATE VACT_CODE_MANG SET DEL_WHET = 1
+		WHERE VACT_CODE_NO = #{vact_code_no}
+	</update>
+</mapper>

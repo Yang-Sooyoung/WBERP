@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="jstree">
+	<select id="getCorpList" resultType="hashmap">
+		SELECT D.DEPT_NO AS ID, D.DEPT_NM || '(' || NVL(E.CNT, 0) || ')' AS TEXT,
+		 DECODE(D.DEPT_HEAD_NO, D.DEPT_NO, '#', D.DEPT_HEAD_NO) AS PARENT, 'group' AS TYPE
+				FROM DEPT D LEFT OUTER JOIN (SELECT H.DEPT_NO ,COUNT(*) AS CNT
+                             FROM EMP E INNER JOIN HR_ISUC H
+                                                ON E.EMP_NO = H.EMP_NO
+                                               AND H.END_DATE IS NULL
+                                               AND H.STATE = 1
+                             GROUP BY H.DEPT_NO) E
+                         ON D.DEPT_NO = E.DEPT_NO
+				ORDER BY D.DEPT_NO ASC
+</select>
+	
+</mapper>

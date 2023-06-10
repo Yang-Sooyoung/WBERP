@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="deptPers">
+	<select id="getDeptPersMangCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EMP
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND EMP_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getDeptPersMangList" resultType="hashmap">
+		SELECT E.EMP_NO, E.EMP_NM, E.PHOTO_ADDR, E.ADDR , E.DETL_ADDR, E.POST_NO, E.TEL_NO, E.CELL_NO, 
+      E.EMAIL, E.BIRTH, E.SEX_CODE,E.ACNT_NM, E.BANK_NO, E.ACNT_NO, E.ATHR_NO, E.EMP_PW, E.LOCAL_CODE, E.DEPT_NO
+      FROM ( SELECT E1.EMP_NO, E1.EMP_NM, E1.PHOTO_ADDR, E1.ADDR, E1.DETL_ADDR, E1.POST_NO, E1.TEL_NO, E1.CELL_NO, E1.EMAIL, TO_CHAR(E1.BIRTH, 'YYYY-MM-DD') AS BIRTH, 
+               E1.SEX_CODE, E1.ACNT_NM, E1.BANK_NO,
+               E1.ACNT_NO, E1.ATHR_NO, E1.EMP_PW, E1.LOCAL_CODE, D.DEPT_NO,
+                    ROW_NUMBER() OVER(ORDER BY E1.EMP_NO ASC) AS RNUM 
+                    FROM EMP E1 INNER JOIN HR_ISUC H
+                                       ON E1.EMP_NO = H.EMP_NO
+                                       AND H.END_DATE IS NULL
+                                       AND H.STATE = 1
+                               INNER JOIN DEPT D
+                                       ON H.DEPT_NO = D.DEPT_NO
+                               INNER JOIN POSN P
+                                       ON H.POSN_NO = P.POSN_NO
+            WHERE 1 = 1      
+			   <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND D.DEPT_NO LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				<if test="DEPT_NO != null and DEPT_NO != data.node.id">
+					 D.DEPT_NO LIKE '%' || #{DEPT_NO} || '%'
+				</if>
+			  ) E
+		WHERE E.RNUM BETWEEN #{startCnt} AND #{endCnt}
+		AND DEPT_NO = #{dept_no}
+	</select>
+	<select id = "getDeptPersMangDetailCont" parameterType = "hashmap" resultType = "hashmap">
+		SELECT EMP_NO, EMP_NM, PHOTO_ADDR, ADDR, DETL_ADDR, POST_NO, TEL_NO, CELL_NO, EMAIL, TO_CHAR(BIRTH, 'YYYY-MM-DD') AS BIRTH, SEX_CODE, ACNT_NM, BANK_NO,
+		ACNT_NO, ATHR_NO, EMP_PW, LOCAL_CODE
+		FROM EMP 
+		WHERE 1 = 1
+		AND EMP_NO = #{emp_no}
+	</select>
+	
+</mapper>

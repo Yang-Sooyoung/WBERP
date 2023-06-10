@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="board">
+
+	<!-- 게시판 관리 -->
+	<select id="getBoardMang" parameterType="hashmap" resultType="hashmap">
+		SELECT BOARD_MANG_NO,BOARD_NM,BOARD_TYPE_NO,BOARD_ORDER
+		FROM BOARD_MANG B INNER JOIN EMP E
+                      		      ON B.EMP_NO = E.EMP_NO
+		WHERE E.EMP_NO &lt; = 2 and BOARD_ORDER = 0
+	</select>	
+	
+	<!--  게시판 관리 추가 쿼리 -->
+	<update id="addAjax" parameterType="hashmap">
+		UPDATE BOARD_MANG SET BOARD_ORDER = 1
+		WHERE BOARD_MANG_NO = #{BOARD_MANG_NO}
+	</update>
+	
+	<!--  게시판 관리 호출쿼리 -->
+	<select id="ajaxBoard" parameterType="hashmap" resultType="hashmap">
+		SELECT BOARD_MANG_NO,BOARD_NM,BOARD_TYPE_NO,BOARD_ORDER
+		FROM BOARD_MANG B INNER JOIN EMP E
+                      		      ON B.EMP_NO = E.EMP_NO
+		WHERE E.EMP_NO &lt; = 2 and BOARD_ORDER = 1
+	</select>
+
+	<!--  게시판 관리 삭제쿼리 -->
+	<update id="delAjax" parameterType="hashmap">
+		UPDATE BOARD_MANG SET BOARD_ORDER = 0
+		WHERE BOARD_MANG_NO = #{BOARD_MANG_NO}
+	</update>
+	
+	<!-- 전사게시판 글목록 -->
+	<select id="getBoard" parameterType="hashmap" resultType="hashmap">
+		SELECT BNO, BKNO, BOARD_TITLE, DEPT_NM, EMP_NM, BOARD_DT ,BOARD_HIT
+		FROM( SELECT  B.BOARD_NO AS BNO,G.BOARD_NO AS BKNO, BOARD_MANG_NO, BOARD_TITLE, D.DEPT_NM,
+		              POSN_NM || EMP_NM AS EMP_NM, TO_CHAR(BOARD_REG_DATE, 'YYYY-MM-DD')AS BOARD_DT ,BOARD_HIT,
+		              ROW_NUMBER() OVER (ORDER BY B.BOARD_NO DESC) AS NUM
+		      FROM BOARD B INNER JOIN EMP E
+		                           ON B.EMP_NO = E.EMP_NO
+		                   INNER JOIN HR_ISUC H
+		                           ON E.EMP_NO = H.EMP_NO
+		                   INNER JOIN DEPT D
+		                           ON H.DEPT_NO = D.DEPT_NO
+		                   INNER JOIN POSN P
+		                           ON H.POSN_NO = P.POSN_NO 
+		                   LEFT OUTER JOIN (SELECT *
+		                                  FROM BOARD_BOKM
+		                                  WHERE EMP_NO = #{EMP_NO} ) G
+		                              ON B.BOARD_NO = G.BOARD_NO
+			 WHERE B.BOARD_DEL_WHET = 0 AND BOARD_MANG_NO &lt;= 8
+    		 <if test="searchTxt != null and searchTxt != '' ">
+      	 <choose>
+      	 	<when test="searchGbn == 0">
+      	 		AND BOARD_TITLE LIKE '%' || #{searchTxt} || '%'
+      	 	</when>
+      	 	<when test="searchGbn == 1">
+      	 		AND C.EMP_NM LIKE '%' || #{searchTxt} || '%'
+      	 	</when>
+      	 </choose>
+      </if>  
+    	) C
+		WHERE C.NUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<!-- 게시글 카운트 -->
+	<select id="getBoardCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM BOARD B INNER JOIN EMP E
+                		     ON B.EMP_NO = E.EMP_NO
+                     INNER JOIN HR_ISUC H
+                             ON E.EMP_NO = H.EMP_NO
+                     INNER JOIN DEPT D
+                             ON H.DEPT_NO = D.DEPT_NO
+                     INNER JOIN POSN P
+                             ON H.POSN_NO = P.POSN_NO
+		WHERE B.BOARD_DEL_WHET = 0 AND BOARD_MANG_NO &lt; = 8
+		 <if test="searchTxt != null and searchTxt != '' ">
+      	 <choose>
+      	 	<when test="searchGbn == 0">
+      	 		AND BOARD_TITLE LIKE '%' || #{searchTxt} || '%'
+      	 	</when>
+      	 	<when test="searchGbn == 1">
+      	 		AND C.EMP_NM LIKE '%' || #{searchTxt} || '%'
+      	 	</when>
+      	 </choose>
+      </if>
+	</select>
+	
+	<!-- 전사게시판 상세보기 -->
+	<select id="gwBoardDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT B.BOARD_NO, E.EMP_NM, B.BOARD_TITLE, B.BOARD_CONT,
+                  TO_CHAR(BOARD_REG_DATE,'YYYY-MM-DD')AS BOARD_REG_DATE, 
+                  B.BOARD_HIT, B.BOARD_DEL_WHET
+        FROM BOARD B INNER JOIN EMP E
+                             ON B.EMP_NO = E.EMP_NO
+        WHERE B.BOARD_NO = #{BOARD_NO} AND B.BOARD_MANG_NO = 7 
+	</select> 
+	
+	<!-- 전사게시판 파일 상세보기 -->
+	<select id="gwBoardFileDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT IMG_DEL_WHETE, BOARD_FILE
+		FROM ATCH_FILE A INNER JOIN BOARD B
+   		                         ON A.BOARD_NO = B.BOARD_NO
+		WHERE B.BOARD_NO = #{BOARD_NO} AND A.IMG_DEL_WHETE = 0
+	</select>
+	
+	<!-- 전사게시판 조회수 -->
+	<update id="gwBoardHit" parameterType="hashmap">
+		UPDATE BOARD SET BOARD_HIT = BOARD_HIT + 1
+		WHERE BOARD_NO = #{BOARD_NO}
+	</update>
+	
+	<!-- 전사게시판 삭제 -->
+	<update id="gwBoardDelete" parameterType="hashmap">
+		UPDATE BOARD SET BOARD_DEL_WHET = 1
+		WHERE BOARD_NO = #{BOARD_NO}
+	</update>
+	
+	<!-- 전사게시판 추가 -->
+	<insert id="gwBoardAdd" parameterType="hashmap">
+		INSERT INTO BOARD (BOARD_NO, BOARD_MANG_NO, EMP_NO, BOARD_TITLE, BOARD_CONT)
+		VALUES(BOARD_SEQ.NEXTVAL,'7', #{EMP_NO}, #{BOARD_TITLE}, #{BOARD_CONT})
+	</insert>
+	
+	<!-- 전사게시판 파일 첨부 -->
+	<insert id="gwBoardFile" parameterType="hashmap">
+		INSERT INTO ATCH_FILE (ATCH_FILE_NO, BOARD_NO, BOARD_FILE)
+      	VALUES (ATCH_FILE_SEQ.NEXTVAL,BOARD_SEQ.CURRVAL,#{docmatchfilenm})
+	</insert>
+	
+	<!-- 전사게시판 수정파일 첨부 -->
+	<insert id="gwBoardFile2" parameterType="hashmap">
+		INSERT INTO ATCH_FILE (ATCH_FILE_NO, BOARD_NO, BOARD_FILE)
+      	VALUES (ATCH_FILE_SEQ.NEXTVAL,#{BOARD_NO},#{docmatchfilenm})
+	</insert>
+	
+	<!-- 전사게시판 보드넘버 -->
+	<select id="getBoardNo" resultType="String">
+		SELECT BOARD_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<!-- 전사게시판 수정 -->
+	<update id="boardUpdate" parameterType="hashmap">
+		UPDATE BOARD SET BOARD_TITLE = #{BOARD_TITLE},
+                         BOARD_CONT = #{BOARD_CONT}
+        WHERE BOARD_NO = #{BOARD_NO}
+	</update>
+	
+	<!-- 전사게시판 파일 수정 쿼리 -->
+	<update id="fileDelete" parameterType="hashmap">
+		UPDATE ATCH_FILE SET IMG_DEL_WHETE = 1
+        WHERE BOARD_NO = #{BOARD_NO}
+	</update>
+	
+	<!-- 즐겨찾기 목록  -->
+	<select id="getBokBoard" parameterType="hashmap" resultType="hashmap">
+		SELECT BOARD_NO, BOARD_TITLE, DEPT_NM, EMP_NM, BOARD_DT ,BOARD_HIT
+		FROM( SELECT  G.BOARD_NO, B.BOARD_MANG_NO, B.BOARD_TITLE, D.DEPT_NM,
+              POSN_NM || EMP_NM AS EMP_NM, 
+              TO_CHAR(BOARD_REG_DATE, 'YYYY-MM-DD')AS BOARD_DT ,B.BOARD_HIT,
+              ROW_NUMBER() OVER (ORDER BY B.BOARD_NO DESC) AS NUM
+      		  
+      		  FROM BOARD B INNER JOIN EMP E
+             		               ON B.EMP_NO = E.EMP_NO
+		                   INNER JOIN HR_ISUC H
+		                           ON E.EMP_NO = H.EMP_NO
+		                   INNER JOIN DEPT D
+		                           ON H.DEPT_NO = D.DEPT_NO
+		                   INNER JOIN POSN P
+		                           ON H.POSN_NO = P.POSN_NO 
+		                   LEFT OUTER JOIN BOARD_BOKM G
+		                                ON B.BOARD_NO = G.BOARD_NO
+     		 WHERE B.BOARD_DEL_WHET = 0 AND G.BOARD_NO IS NOT NULL AND G.EMP_NO = #{EMP_NO}
+       		 ) C
+		WHERE C.NUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<!-- 즐겨찾기페이지 페이징 카운터 -->
+	<select id="getBokcnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM BOARD_BOKM M INNER JOIN BOARD B
+								  ON M.BOARD_NO = B.BOARD_NO
+						   INNER JOIN EMP E
+             		               ON B.EMP_NO = E.EMP_NO
+		                   INNER JOIN HR_ISUC H
+		                           ON E.EMP_NO = H.EMP_NO
+		                   INNER JOIN DEPT D
+		                           ON H.DEPT_NO = D.DEPT_NO
+		                   INNER JOIN POSN P
+		                           ON H.POSN_NO = P.POSN_NO
+		WHERE B.BOARD_DEL_WHET = 0 AND M.EMP_NO = #{EMP_NO}
+	</select>	
+
+	
+	<!-- 클릭시 이미지 변환 -->
+	<insert id="getBokImg" parameterType="hashmap">
+		INSERT INTO BOARD_BOKM(EMP_NO, BOARD_NO)
+        VALUES(#{EMP_NO}, #{BOARD_NO})
+	</insert>
+		
+	<!-- 즐겨찾기 해제 -->
+	<delete id="getBokCancel" parameterType="hashmap">
+		DELETE FROM BOARD_BOKM
+        WHERE BOARD_NO = #{BOARD_NO}
+	</delete>
+		
+	<!-- 한줄게시판 페이지 -->
+	<select id="getObCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM BOARD B INNER JOIN EMP E 
+    		                    ON B.EMP_NO = E.EMP_NO
+		WHERE B.BOARD_DEL_WHET = 0 AND BOARD_MANG_NO = 9
+	</select>
+	
+	<!-- 한줄게시판 글목록 -->
+	<select id="getOb" parameterType="hashmap" resultType="hashmap">
+		SELECT R.BOARD_NO, R.EMP_NO, R.EMP_NM, R.BOARD_CONT 
+		FROM( SELECT B.BOARD_NO, E.EMP_NO, E.EMP_NM, B.BOARD_CONT,
+           			 ROW_NUMBER() OVER(ORDER BY B.BOARD_NO DESC) AS BNO
+     		  FROM BOARD B INNER JOIN EMP E
+            		               ON B.EMP_NO = E.EMP_NO
+      		  WHERE BOARD_DEL_WHET = 0 AND BOARD_MANG_NO = 9  
+      		 ) R
+      	WHERE R.BNO BETWEEN #{startCnt} AND #{endCnt}  
+	</select> 
+	 
+	<!-- 한줄게시판 추가 -->
+	<insert id="addOneBoard" parameterType="hashmap">
+		INSERT INTO BOARD(BOARD_NO,BOARD_MANG_NO,EMP_NO,BOARD_TITLE,BOARD_CONT)
+		VALUES (BOARD_SEQ.NEXTVAL,'9',#{EMP_NO},#{BOARD_TITLE},#{BOARD_CONT})
+	</insert>
+	
+	<!-- 한줄게시판 삭제 -->
+	<update id="deleteOb" parameterType="hashmap">
+		UPDATE BOARD SET BOARD_DEL_WHET = 1
+		WHERE BOARD_NO = #{BOARD_NO}
+	</update>
+	
+	<!-- 한줄게시판 수정을 위한 상세보기 -->
+	<select id="oneDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT BOARD_NO, EMP_NO, EMP_NM, BOARD_CONT
+   	    FROM( SELECT B.BOARD_NO, E.EMP_NO, E.EMP_NM, B.BOARD_CONT,
+       	             ROW_NUMBER() OVER(ORDER BY B.BOARD_NO DESC) AS BNO
+          	  FROM BOARD B INNER JOIN EMP E
+              	                   ON B.EMP_NO = E.EMP_NO
+          	  WHERE BOARD_DEL_WHET = 0 AND BOARD_MANG_NO = 9 ) C
+    	WHERE C.BOARD_NO = #{BOARD_NO}
+	</select>
+	
+	<!-- 한줄게시판 수정 -->
+	<update id="oneUpdate" parameterType="hashmap">
+		UPDATE BOARD SET BOARD_CONT = #{BOARD_CONT}
+		WHERE BOARD_NO = #{BOARD_NO}
+	</update>
+	
+	
+</mapper>

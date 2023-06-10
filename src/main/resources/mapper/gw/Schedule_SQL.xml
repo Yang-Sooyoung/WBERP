@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="Sche">
+
+	<select id="getgwScheDetail" parameterType="hashmap" resultType="hashmap">
+SELECT  S.SCHE_NO,E.EMP_NO,E.EMP_NM,S.SCHE_NM,DECODE(S.SCHE_SORT,'0','전사','1','부서','2','개인')AS SCHE_SORT,
+                                    DECODE(S.SCHE_WORK_TYPE,'0','내근','1','외근')AS SCHE_WORK_TYPE,
+                                    E.CELL_NO,
+                                    S.SCHE_DEL_WHET,
+                                    D.DEPT_NM,
+                                    F.SCHE_ATCH_FILE_NO,
+                                    F.SCHE_ATCH_FILE_NM,
+                                    E.EMAIL,S.SCHE_CONT,S.SCHE_LOCT,
+                                    TO_CHAR(S.SCHE_START_DAY, 'YYYY-MM-DD') AS SCHE_START_DAY,
+                                    TO_CHAR(S.SCHE_START_DAY, 'HH24') AS SCHE_START_DAY_TIME_H,
+		                            TO_CHAR(S.SCHE_START_DAY, 'MI') AS SCHE_START_DAY_TIME_M,
+                                    TO_CHAR(S.SCHE_END_DAY, 'YYYY-MM-DD') AS SCHE_END_DAY,
+		                            TO_CHAR(S.SCHE_END_DAY, 'HH24') AS SCHE_END_DAY_TIME_H,
+		                            TO_CHAR(S.SCHE_END_DAY, 'MI') AS SCHE_END_DAY_TIME_M
+FROM SCHE_ADD S INNER JOIN EMP E
+                        ON S.EMP_NO = E.EMP_NO
+                   INNER JOIN HR_ISUC H
+                   ON E.EMP_NO = H.EMP_NO
+                INNER JOIN DEPT D
+                    ON H.DEPT_NO = D.DEPT_NO
+                LEFT OUTER JOIN SCHE_ATCH_FILE F
+                      ON S.SCHE_NO = F.SCHE_NO
+                        WHERE 1=1
+                         AND S.SCHE_DEL_WHET =0
+                           AND S.SCHE_NO =#{gwshceno}
+                       
+
+	</select>
+
+	<select id="getFullcalendar" parameterType="hashmap" resultType="hashmap">
+	SELECT V.SCHE_NM AS TITLE, TO_CHAR(V.SCHE_START_DAY, 'YYYY-MM-DD HH24:MI') AS "START", 
+	TO_CHAR(V.SCHE_END_DAY, 'YYYY-MM-DD HH24:MI') AS "END", V.SCHE_NO AS ID
+      			,V.EMP_NO AS EMPNO, V1.DEPT_NO AS DEPTNO,
+      			DECODE(V.SCHE_SORT,'0','#BF77F6','1','#FF796C','2','#FFB07C')AS COLOR
+		FROM  SCHE_ADD V 
+                         INNER JOIN (SELECT E.EMP_NO, D.DEPT_NO
+                                    FROM EMP E INNER JOIN HR_ISUC HI
+                                                       ON E.EMP_NO = HI.EMP_NO
+                                               INNER JOIN DEPT D
+                                                       ON HI.DEPT_NO = D.DEPT_NO)V1
+                                 ON V.EMP_NO = V1.EMP_NO
+                         
+		WHERE V.SCHE_DEL_WHET = 0
+		    
+		 <if test="gwschesort !=null and gwschesort != ''and gwschesortt !=-1">
+			AND SCHE_SORT IN (${gwschesort})
+		</if>
+		
+	</select>
+		<insert id="getgwSchAdd" parameterType="hashmap">
+		INSERT INTO SCHE_ADD(SCHE_NO,EMP_NO,SCHE_NM,SCHE_SORT,SCHE_WORK_TYPE,SCHE_START_DAY,
+                        SCHE_END_DAY,SCHE_CONT,SCHE_LOCT)
+		VALUES (SCHE_ADD_SEQ.NEXTVAL,#{sEmpNo},#{gwschenm},#{gwschesort},#{gwscheworktype},
+				TO_DATE(#{gwschestartday}||#{time_txt1}||':'||#{time_txt2}, 'YYYY-MM-DD HH24:MI'),
+				TO_DATE(#{gwscheendday}||#{time_txt3}||':'||#{time_txt4}, 'YYYY-MM-DD HH24:MI'),
+				#{gwschecont},#{gwscheloct})
+		</insert>
+	<update id="getgwSchDelete" parameterType="hashmap">
+		UPDATE SCHE_ADD SET SCHE_DEL_WHET =1
+		WHERE SCHE_NO =#{gwshceno}
+	</update> 
+
+	<select id="ScheAdd" parameterType="hashmap" resultType="hashmap">
+    	SELECT CELL_NO, EMAIL 
+		FROM EMP
+		WHERE EMP_NO = #{sEmpNo}
+	</select>
+
+	<insert id="addgwScheAtchFile" parameterType="hashmap">
+	   INSERT INTO SCHE_ATCH_FILE(SCHE_ATCH_FILE_NO,SCHE_NO,SCHE_ATCH_FILE_NM)
+		VALUES (SCHE_ATCH_FILE_SEQ.NEXTVAL,#{gwshceno},#{docmatchfilenm})
+	</insert>
+	
+	<update id="gwSchUpdate" parameterType="hashmap">
+	UPDATE SCHE_ADD SET SCHE_NM =#{gwschenm},
+                    SCHE_SORT = #{gwschesort},
+                    SCHE_WORK_TYPE=#{gwscheworktype},
+                    SCHE_CONT= #{gwschecont},
+                    SCHE_LOCT= #{gwscheloct},
+                	 SCHE_START_DAY=TO_DATE(#{gwschestartday}||#{time_txt1}||':'||#{time_txt2}, 'YYYY-MM-DD HH24:MI'),
+					SCHE_END_DAY=TO_DATE(#{gwscheendday}||#{time_txt3}||':'||#{time_txt4}, 'YYYY-MM-DD HH24:MI')
+                    WHERE SCHE_NO = #{gwshceno}
+	</update>
+	<delete id="gwSchDelFile" parameterType="hashmap">
+	 DELETE FROM SCHE_ATCH_FILE
+		 WHERE SCHE_NO =#{gwshceno}
+	</delete>
+	
+<update id="gwSchUpdateFile">
+		UPDATE SCHE_ATCH_FILE SET SCHE_ATCH_FILE_NM = #{docmatchfilenm}
+		WHERE SCHE_NO = #{gwshceno}
+</update>
+	<select id="getgwScheAtchFileSelect" parameterType="hashmap" resultType="hashmap">
+	   SELECT SCHE_ATCH_FILE_NO,SCHE_NO,SCHE_ATCH_FILE_NM
+    FROM SCHE_ATCH_FILE
+	</select>
+		<insert id="addgwScheAtchFile0" parameterType="hashmap">
+	   INSERT INTO SCHE_ATCH_FILE(SCHE_ATCH_FILE_NO,SCHE_NO,SCHE_ATCH_FILE_NM)
+		VALUES (SCHE_ATCH_FILE_SEQ.NEXTVAL,SCHE_ADD_SEQ.CURRVAL,#{docmatchfilenm})
+	</insert>
+
+</mapper>

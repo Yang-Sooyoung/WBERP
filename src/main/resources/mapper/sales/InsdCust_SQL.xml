@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="insdcust">
+	<select id="getInsdCustList" parameterType="hashmap" resultType="hashmap">
+		SELECT C.ENTP_NO, C.ENTP_NM, C.BUSN_NO, C.DELG_NM, C.DELG_TEL, C.ENTP_ADDR, 
+			TO_CHAR(C.ENTP_MODF_DATE, 'YYYY.MM.DD') AS ENTP_MODF_DATE
+		FROM
+		(SELECT ENTP_NO, ENTP_NM, BUSN_NO, DELG_NM, DELG_TEL, ENTP_ADDR, ENTP_MODF_DATE, ROW_NUMBER() OVER(ORDER BY ENTP_NO DESC) AS RNUM
+		FROM CUST_COMP
+		WHERE 1=1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND UPPER(ENTP_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND UPPER(ENTP_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND UPPER(BUSN_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 3">
+					AND UPPER(DELG_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+			</choose>
+		</if>
+		)C
+		WHERE C.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id="getInsdCustCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CUST_COMP
+		WHERE 1=1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND UPPER(ENTP_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND UPPER(ENTP_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND UPPER(BUSN_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 3">
+					AND UPPER(DELG_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<insert id="CustComAdd" parameterType="hashmap">
+		INSERT INTO CUST_COMP(ENTP_NO, EMP_NO, ENTP_NM, DELG_NM, DELG_TEL, ENTP_ADDR, BUSN_NO)
+		VALUES(CUST_COMP_SEQ.NEXTVAL, #{sEmpNo}, #{ENTP_NM}, #{DELG_NM}, #{DELG_TEL}, 
+			#{ENTP_ADDR1}||'.'||#{ENTP_ADDR2}||' '||#{ENTP_ADDR3}, 
+			#{BUSN_NO})
+	</insert>
+	<select id="getCustCom" parameterType="hashmap" resultType="hashmap">
+		SELECT C.ENTP_NM, C.DELG_NM, C.ENTP_NO, C.BUSN_NO, E.EMP_NM, C.EMP_NO, C.ENTP_MODF_DATE, 
+		        SUBSTR(C.DELG_TEL,1,3)AS TEL1,
+                SUBSTR(C.DELG_TEL,4,4)AS TEL2,
+                SUBSTR(C.DELG_TEL,8)AS TEL3,
+		        SUBSTR(ENTP_ADDR,0,INSTR(ENTP_ADDR,'.')-1) AS POST_NO, 
+		        SUBSTR(ENTP_ADDR,INSTR(ENTP_ADDR,'.')+1)AS ADDR_1      
+		FROM CUST_COMP C INNER JOIN EMP E ON C.EMP_NO = E.EMP_NO
+		WHERE C.ENTP_NO = #{entpNo}
+	</select>
+	<delete id="CustComDelete" parameterType="hashmap">
+		DELETE FROM CUST_COMP
+		WHERE ENTP_NO=#{entpNo}
+	</delete>
+	<select id="getCustGodsList" parameterType="hashmap" resultType="hashmap">
+		SELECT I.CUST_NO, I.CUST_NM, I.ENTP_NO, I.DEPT_NM, I.SALE_NO, I.PROG_COND,I.GODS_NM,I.RNUM
+		FROM(SELECT I.CUST_NO, I.CUST_NM, I.ENTP_NO, I.DEPT_NM, I.SALE_NO, I.PROG_COND,I.GODS_NM,
+		        ROW_NUMBER()OVER(ORDER BY I.CUST_NO DESC)AS RNUM
+		    FROM(SELECT I.CUST_NO, I.CUST_NM, I.ENTP_NO, I.DEPT_NM, S.SALE_NO, S.PROG_COND,G.GODS_NM
+		        FROM INSD_CUST I INNER JOIN CUST_COMP C ON I.ENTP_NO = C.ENTP_NO
+		                    INNER JOIN SALE S ON I.CUST_NO = S.CUST_NO
+		                    INNER JOIN COTR CR ON CR.SALE_NO = S.SALE_NO
+		                    INNER JOIN COTR_GODS CG ON CG.COTR_NO = CR.COTR_NO
+		                    INNER JOIN GODS G ON G.GODS_NO = CG.GODS_NO)I
+		    WHERE I.PROG_COND = 2 AND I.ENTP_NO = #{entpNo})I
+		    WHERE I.RNUM BETWEEN #{startCntP} AND #{endCntP}
+	</select>
+	<select id="getCustGodsCnt" parameterType="hashmap" resultType="Integer">
+		SELECT count(*)
+		FROM INSD_CUST I INNER JOIN CUST_COMP C ON I.ENTP_NO = C.ENTP_NO
+		                INNER JOIN SALE S ON I.CUST_NO = S.CUST_NO
+		                INNER JOIN COTR CR ON CR.SALE_NO = S.SALE_NO
+		                INNER JOIN COTR_GODS CG ON CG.COTR_NO = CR.COTR_NO
+		                INNER JOIN GODS G ON G.GODS_NO = CG.GODS_NO
+		WHERE S.PROG_COND = 2 AND I.ENTP_NO = #{entpNo}
+	</select>
+	<update id="updateCustCom" parameterType="hashmap">
+		UPDATE CUST_COMP SET ENTP_NM=#{ENTP_NM},
+             DELG_NM=#{DELG_NM},
+             BUSN_NO=#{BUSN_NO},
+             EMP_NO=#{sEmpNo},
+             ENTP_MODF_DATE=SYSDATE,
+             ENTP_ADDR=#{ENTP_ADDR1}||'.'||#{ENTP_ADDR2}||' '||#{ENTP_ADDR3}
+		WHERE ENTP_NO=#{entpNo}
+	</update>
+	<select id="getInsdCustList2" parameterType="hashmap" resultType="hashmap">
+		SELECT I.CUST_NO , I.ENTP_NO , I.ENTP_NM , I.DEPT_NM , I.CUST_NM , I.CUST_CELL , 
+        I.CUST_ADDR , I.MODF_DATE
+		FROM(SELECT I.CUST_NO , C.ENTP_NO , C.ENTP_NM , DEPT_NM , CUST_NM , CUST_CELL , 
+		        CUST_ADDR , TO_CHAR(I.MODF_DATE, 'YYYY.MM.DD')AS MODF_DATE ,ROW_NUMBER()OVER(ORDER BY I.CUST_NO DESC) AS RNUM
+		    FROM INSD_CUST I INNER JOIN CUST_COMP C ON I.ENTP_NO = C.ENTP_NO
+		    WHERE 1=1
+		    <if test="searchTxt != null and searchTxt != ''">
+				<choose>
+					<when test="searchGbn eq 0">
+						AND UPPER(C.ENTP_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+					</when>
+					<when test="searchGbn eq 1">
+						AND UPPER(C.ENTP_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+					</when>
+					<when test="searchGbn eq 2">
+						AND UPPER(I.CUST_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+					</when>
+					<when test="searchGbn eq 3">
+						AND UPPER(I.CUST_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+					</when>
+				</choose>
+			</if>
+		    )I
+			WHERE I.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id="getInsdCustCnt2" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM INSD_CUST I INNER JOIN CUST_COMP C ON I.ENTP_NO = C.ENTP_NO
+		WHERE 1=1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND UPPER(C.ENTP_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND UPPER(C.ENTP_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND UPPER(I.CUST_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 3">
+					AND UPPER(I.CUST_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getCustDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT I.CUST_NO, I.CUST_NM, I.ENTP_NO, I.DEPT_NM, E.EMP_NM, C.ENTP_NM,
+		        I.EMP_NO,I.ADD_DATE,I.MODF_DATE,
+                SUBSTR(I.CUST_CELL,1,3)AS CELL_1,
+                SUBSTR(I.CUST_CELL,4,4)AS CELL_2,
+                SUBSTR(I.CUST_CELL,8)AS CELL_3,
+                I.CUST_TEL,
+                SUBSTR(I.CUST_EMAIL,0,INSTR(I.CUST_EMAIL,'@')-1) AS CUST_EMAIL1, 
+		        SUBSTR(I.CUST_EMAIL,INSTR(I.CUST_EMAIL,'@')+1)AS CUST_EMAIL2,
+                SUBSTR(I.CUST_ADDR,0,INSTR(I.CUST_ADDR,'.')-1) AS POST_NO, 
+		        SUBSTR(I.CUST_ADDR,INSTR(I.CUST_ADDR,'.')+1)AS CUST_ADDR
+		FROM INSD_CUST I INNER JOIN EMP E ON I.EMP_NO = E.EMP_NO
+		                INNER JOIN CUST_COMP C ON I.ENTP_NO = C.ENTP_NO
+		WHERE I.CUST_NO = #{custNo}
+	</select>
+	<delete id="CustDelete" parameterType="hashmap">
+		DELETE FROM INSD_CUST
+		WHERE CUST_NO=#{custNo}
+	</delete>
+	<!-- 고객등록 -->
+	<insert id="CustAdd" parameterType="hashmap">
+		INSERT
+		INTO INSD_CUST(CUST_NO, ENTP_NO, EMP_NO,  DEPT_NM, CUST_NM, CUST_ADDR, CUST_TEL,CUST_CELL, CUST_EMAIL)
+		VALUES(#{insd_cust_no}, #{ENTP_NO}, #{sEmpNo}, #{DEPT_NM}, #{CUST_NM}, 
+				#{CUST_ADDR1}||'.'||#{CUST_ADDR2}||' '||#{CUST_ADDR3},
+				#{CUST_TEL}, #{CUST_CELL},
+				#{CUST_EMAIL1}||'@'||#{CUST_EMAIL2})
+		<!-- 여기가 고객 의견 테이블 -->
+		<!--INTO CUST_OPNN(OPNN_NO, EMP_NO, CUST_NO, OPNN_CONT,  DEL)
+	    VALUES(CUST_OPNN_SEQ.NEXTVAL, #{sEmpNo}, INSD_CUST_SEQ.nextval, #{OPNN_CONT}, 0)
+	    SELECT *
+	    FROM DUAL-->
+	</insert>
+	<update id="updateCust" parameterType="hashmap">
+		UPDATE INSD_CUST SET CUST_NM=#{CUST_NM},
+             CUST_ADDR=#{CUST_ADDR1}||'.'||#{CUST_ADDR2}||' '||#{CUST_ADDR3},
+             CUST_TEL=#{CUST_TEL},
+             CUST_CELL=#{CELL_1}||#{CELL_2}||#{CELL_3},
+             CUST_EMAIL=#{CUST_EMAIL1}||'@'||#{CUST_EMAIL2},
+             MODF_DATE=SYSDATE
+		WHERE CUST_NO=#{custNo}
+	</update>
+	<update id="updateOpnn" parameterType="hashmap">
+		UPDATE CUST_OPNN SET DEL = 1
+		WHERE OPNN_NO=#{OPNN_NO}
+	</update>
+	<select id="getopnnList" parameterType="hashmap" resultType="hashmap">
+		SELECT OPNN_NO, C.EMP_NO, CUST_NO, OPNN_CONT, TO_CHAR(WRITE_DATE,'YYYY-MM-DD')AS WRITE_DATE, DEL, E.EMP_NM AS EMP_NM
+		FROM CUST_OPNN C INNER JOIN EMP E ON C.EMP_NO = E.EMP_NO
+		WHERE CUST_NO = #{custNo} AND DEL = 0
+	</select>
+	<select id="getopnnCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM CUST_OPNN
+		WHERE CUST_NO = #{custNo}
+	</select>
+	<insert id="OpnAdd" parameterType="hashmap">
+		INSERT INTO CUST_OPNN(OPNN_NO, EMP_NO, CUST_NO, OPNN_CONT, DEL)
+		VALUES(CUST_OPNN_SEQ.NEXTVAL, #{sEmpNo}, #{custNo}, #{OPNN_CONT},0)
+	</insert>
+	
+	<!-- 고객등록 고객사검색 -->
+	<select id="getCustListPopCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CUST_COMP
+		WHERE 1=1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND UPPER(ENTP_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND UPPER(ENTP_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND UPPER(BUSN_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 3">
+					AND UPPER(DELG_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getCustListPop" parameterType="hashmap" resultType="hashmap">
+		SELECT C.ENTP_NO, C.ENTP_NM, C.BUSN_NO, C.DELG_NM, C.DELG_TEL, C.ENTP_ADDR, 
+			TO_CHAR(C.ENTP_MODF_DATE, 'YYYY.MM.DD') AS ENTP_MODF_DATE
+		FROM
+		(SELECT ENTP_NO, ENTP_NM, BUSN_NO, DELG_NM, DELG_TEL, ENTP_ADDR, ENTP_MODF_DATE, ROW_NUMBER() OVER(ORDER BY ENTP_NO DESC) AS RNUM
+		FROM CUST_COMP
+		WHERE 1=1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND UPPER(ENTP_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND UPPER(ENTP_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND UPPER(BUSN_NO) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+				<when test="searchGbn eq 3">
+					AND UPPER(DELG_NM) LIKE '%' || UPPER(#{searchTxt}) || '%'
+				</when>
+			</choose>
+		</if>
+		)C
+		WHERE C.RNUM BETWEEN #{startCntP} AND #{endCntP}
+	</select>
+	
+	<select id="nextVar" resultType="String">
+		SELECT INSD_CUST_SEQ.NEXTVAL
+		FROM DUAL	
+	</select>
+</mapper>

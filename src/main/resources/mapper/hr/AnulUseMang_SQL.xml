@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="anuluse">
+	<select id="getAnulUseCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		 FROM EMP E INNER JOIN ANUL_USE_MANG A
+                    		      ON E.EMP_NO = A.EMP_NO
+                  		  INNER JOIN VACT_CODE_MANG V
+                         		  ON A.VACT_CODE_NO = V.VACT_CODE_NO        
+                 		  INNER JOIN HR_ISUC H
+                         		  ON E.EMP_NO = H.EMP_NO
+                      		      AND H.END_DATE IS NULL
+                         		  AND H.STATE = 1
+                  		  INNER JOIN DEPT D
+                         		  ON H.DEPT_NO = D.DEPT_NO
+                		  INNER JOIN POSN P
+                        		  ON H.POSN_NO = P.POSN_NO
+		WHERE 1 = 1
+		AND A.DEL_WHET = 0
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND E.EMP_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND V.VACT_CODE_EXPN LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 3">
+					AND A.REG_DAY LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 4">
+					AND A.APRV_STAT LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		<if test="searchGbn2 != null"> 
+			AND V.VACT_CODE_NM LIKE '%' || #{searchGbn2} || '%'
+		</if>
+	</select>
+	<select id="getAnulUseList" resultType="hashmap">
+		SELECT S.ANUL_USE_NO, S.EMP_NO, S.EMP_NM, S.DEPT_NM, S.POSN_NM, S.VACT_CODE_NM, S.VACT_CODE_EXPN, S.CONT, S.REG_DAY, S.START_DAY, S.END_DAY, S.DAY_CNT, S.APRV_STAT_TXT
+		FROM ( SELECT A.ANUL_USE_NO, E.EMP_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, V.VACT_CODE_NM, V.VACT_CODE_EXPN, A.CONT, TO_CHAR(A.REG_DAY,'YYYY-MM-DD') AS REG_DAY, TO_CHAR(A.START_DAY,'YYYY-MM-DD') AS START_DAY, TO_CHAR(A.END_DAY,'YYYY-MM-DD') AS END_DAY, A.DAY_CNT,
+             	  	  DECODE(A.APRV_STAT, 0, '요청', 1, '승인', 2, '반려') AS APRV_STAT_TXT,
+             	  	  ROW_NUMBER() OVER(ORDER BY A.ANUL_USE_NO ASC) AS RNUM
+       		   FROM EMP E INNER JOIN ANUL_USE_MANG A
+                    		      ON E.EMP_NO = A.EMP_NO
+                  		  INNER JOIN VACT_CODE_MANG V
+                         		  ON A.VACT_CODE_NO = V.VACT_CODE_NO        
+                 		  INNER JOIN HR_ISUC H
+                         		  ON E.EMP_NO = H.EMP_NO
+                      		      AND H.END_DATE IS NULL
+                         		  AND H.STATE = 1
+                  		  INNER JOIN DEPT D
+                         		  ON H.DEPT_NO = D.DEPT_NO
+                		  INNER JOIN POSN P
+                        		  ON H.POSN_NO = P.POSN_NO
+        	  WHERE 1 = 1  
+        	  AND A.DEL_WHET = 0
+			  <if test="searchTxt != null and searchTxt != ''">
+				  <choose>
+				  	  <when test="searchGbn eq 0">
+						  AND E.EMP_NO LIKE '%' || #{searchTxt} || '%'
+					  </when>
+					  <when test="searchGbn eq 1">
+						  AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+					  </when>
+					  <when test="searchGbn eq 2">
+						  AND V.VACT_CODE_EXPN LIKE '%' || #{searchTxt} || '%'
+					  </when>
+					  <when test="searchGbn eq 3">
+						  AND A.REG_DAY LIKE '%' || #{searchTxt} || '%'
+					  </when>
+					  <when test="searchGbn eq 4">
+						  AND A.APRV_STAT LIKE '%' || #{searchTxt} || '%'
+					  </when>
+				  </choose>
+			  </if>
+			  <if test="searchGbn2 != null"> 
+				  AND V.VACT_CODE_NM LIKE '%' || #{searchGbn2} || '%'
+			  </if>
+        	  ) S
+		WHERE S.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id = "getAnulUseDetailCont" parameterType = "hashmap" resultType = "hashmap">
+		SELECT A.ANUL_USE_NO, E.EMP_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, V.VACT_CODE_NM, V.VACT_CODE_EXPN, A.CONT, TO_CHAR(A.REG_DAY,'YYYY-MM-DD') AS REG_DAY, TO_CHAR(A.START_DAY,'YYYY-MM-DD') AS START_DAY, TO_CHAR(A.END_DAY,'YYYY-MM-DD') AS END_DAY, A.DAY_CNT, A.APRV_STAT,
+       		   DECODE(A.APRV_STAT, 0, '요청', 1, '승인', 2, '반려') AS APRV_STAT_TXT
+       	FROM EMP E INNER JOIN ANUL_USE_MANG A
+                    	   ON E.EMP_NO = A.EMP_NO
+                   INNER JOIN VACT_CODE_MANG V
+                           ON A.VACT_CODE_NO = V.VACT_CODE_NO        
+                   INNER JOIN HR_ISUC H
+                           ON E.EMP_NO = H.EMP_NO
+                           AND H.END_DATE IS NULL
+                           AND H.STATE = 1
+                   INNER JOIN DEPT D
+                           ON H.DEPT_NO = D.DEPT_NO
+                   INNER JOIN POSN P
+                           ON H.POSN_NO = P.POSN_NO
+        WHERE 1 = 1  
+		AND A.DEL_WHET = 0
+		AND A.ANUL_USE_NO = #{anul_use_no}
+	</select>
+	<insert id="anulUseAdd" parameterType="hashmap">
+		INSERT INTO ANUL_USE_MANG(ANUL_USE_NO, EMP_NO, VACT_CODE_NO, CONT, REG_DAY, START_DAY, END_DAY, DAY_CNT)
+		VALUES (#{anul_use_no}, ${sEmpNo}, #{vact_code_no}, #{cont1}, TO_DATE(#{reg_day1},'YYYY-MM-DD'), TO_DATE(#{start_day1},'YYYY-MM-DD'), TO_DATE(#{end_day1},'YYYY-MM-DD'), #{day_cnt1})
+	</insert>
+	<update id="anulUseUpdate" parameterType="hashmap">
+		UPDATE ANUL_USE_MANG SET VACT_CODE_NO = #{vact_code_no},
+								 EMP_NO = #{emp_no2},
+								 CONT = #{cont2},
+								 START_DAY = #{start_day2},
+								 END_DAY = #{end_day2},
+								 DAY_CNT = #{day_cnt2}
+		WHERE ANUL_USE_NO = #{anul_use_no}
+	</update>
+	<update id="anulUseDelete" parameterType="hashmap">
+		UPDATE  ANUL_USE_MANG SET DEL_WHET = 1
+		WHERE ANUL_USE_NO = #{anul_use_no}
+	</update>
+	<select id="nextVar" resultType="String">
+		SELECT ANUL_USE_MANG_SEQ.nextval
+		FROM DUAL
+	</select>
+</mapper>

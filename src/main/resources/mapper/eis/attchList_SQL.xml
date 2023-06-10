@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="attchList">
+
+
+	<select id="getattchList" parameterType="hashmap" resultType="hashmap">
+		<!-- SELECT
+	        AL.ATTCH_NO,
+	        AL.EIS_CATG_NO,
+	        DECODE(EC.EIS_CATG_NM,NULL,'없음',EC.EIS_CATG_NM) EIS_CATG_NM,
+	        AL.EMP_NO,
+	        EP.EMP_NM,
+	        DECODE(EP.EMP_NM,NULL,'없음',EP.EMP_NM) EMP_NM,
+	        AL.TITLE,
+	        AL.INFO,
+	        AL.ATTCH_TYPE,
+	        AL.PIVOT_WHET,
+	        AL.ATTCH_QUERY,
+	        AL.REG_DATE,
+	        AL.DEL_WHET
+	    FROM
+	        ATTCH_LIST AL
+	        LEFT OUTER JOIN EMP EP
+	        ON AL.EMP_NO = EP.EMP_NO
+	        LEFT OUTER JOIN EIS_CATEGORY EC
+	        ON AL.EIS_CATG_NO = EC.EIS_CATG_NO
+		WHERE ATTCH_NO BETWEEN #{startCnt} AND #{endCnt} -->
+		
+	SELECT ATTCH_NO, EIS_CATG_NM, EMP_NM, TITLE, REG_DATE
+	FROM (SELECT
+	        ATTCH_NO,
+	        EIS_CATG_NM,
+	        EMP_NM,
+	        TITLE,
+	        TO_CHAR(REG_DATE, 'YY-MM-DD') AS REG_DATE,
+	        ROW_NUMBER()OVER (ORDER BY ATTCH_NO DESC) AS RNUM
+	    FROM
+	        ATTCH_LIST AL
+	        LEFT OUTER JOIN EMP EP
+	        ON AL.EMP_NO = EP.EMP_NO
+	        LEFT OUTER JOIN EIS_CATEGORY EC
+	        ON AL.EIS_CATG_NO = EC.EIS_CATG_NO
+	    WHERE
+		AL.DEL_WHET = 0
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND TITLE LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND EIS_CATG_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	        ) AA
+	       WHERE AA.RNUM BETWEEN #{startCnt} AND #{endCnt}
+		
+		
+	</select>
+	 
+	<select id="getAttchCnt" parameterType = "hashmap" resultType = "Integer">
+		
+		SELECT COUNT(*) AS CNT
+		FROM (SELECT
+		        ATTCH_NO,
+		        EIS_CATG_NM,
+		        EMP_NM,
+		        TITLE,
+		        TO_CHAR(REG_DATE, 'YY-MM-DD') AS REG_DATE,
+		        ROW_NUMBER()OVER (ORDER BY ATTCH_NO DESC) AS RNUM
+		    FROM
+		        ATTCH_LIST AL
+		        LEFT OUTER JOIN EMP EP
+		        ON AL.EMP_NO = EP.EMP_NO
+		        LEFT OUTER JOIN EIS_CATEGORY EC
+		        ON AL.EIS_CATG_NO = EC.EIS_CATG_NO
+		    WHERE
+			AL.DEL_WHET = 0
+			<if test="searchTxt != null and searchTxt != ''">
+				<choose>
+					<when test="searchGbn eq 0">
+						AND TITLE LIKE '%' || #{searchTxt} || '%'
+					</when>
+					<when test="searchGbn eq 1">
+						AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+					</when>
+					<when test="searchGbn eq 2">
+						AND EIS_CATG_NM LIKE '%' || #{searchTxt} || '%'
+					</when>
+				</choose>
+			</if>
+	        ) AA
+		
+				
+	</select>
+	
+	
+	<select id="getattchDetail" parameterType = "hashmap" resultType = "hashmap">
+	
+	SELECT ATTCH_NO, EIS_CATG_NO, EIS_CATG_NM, EMP_NM, TITLE, INFO, ATTCH_TYPE, ATTCH_QUERY
+	FROM (SELECT
+	        AL.ATTCH_NO,
+	        AL.EIS_CATG_NO,
+	        EIS_CATG_NM,
+	        EMP_NM,
+	        TO_CHAR(REG_DATE, 'YY-MM-DD') AS REG_DATE,
+	        ROW_NUMBER()OVER (ORDER BY ATTCH_NO DESC) AS RNUM,
+	        AL.TITLE,
+	        AL.INFO,
+	        AL.ATTCH_TYPE,
+	        
+	        AL.ATTCH_QUERY
+	    FROM
+	        ATTCH_LIST AL
+	        LEFT OUTER JOIN EMP EP
+	        ON AL.EMP_NO = EP.EMP_NO
+	        LEFT OUTER JOIN EIS_CATEGORY EC
+	        ON AL.EIS_CATG_NO = EC.EIS_CATG_NO) AA
+		WHERE ATTCH_NO = #{attch_NO}
+		<!-- TODO: 추가작업필요함 -->
+	</select>
+	
+	<select id="attchAdd" parameterType = "hashmap"  resultType = "hashmap">
+		INSERT INTO ATTCH_LIST(ATTCH_NO, TITLE, ATTCH_TYPE, EMP_NO, EIS_CATG_NO, INFO, ATTCH_QUERY)
+		 VALUES(ATTCH_LIST_SEQ.NEXTVAL, #{TITLE}, #{ATTCH_TYPE}, #{EMP_NO}, #{EIS_CATG_NO}, #{INFO}, #{query_Text})
+	</select>
+	
+	<update id = "attchDelete" parameterType="hashmap">
+		UPDATE ATTCH_LIST SET DEL_WHET = 1
+		WHERE ATTCH_NO = #{attch_NO}
+	</update>
+	
+	
+	<select id="getattchQuery" parameterType = "hashmap" resultType="hashmap">
+		${query_Text}
+	</select>
+	
+	<update id="attchUpdate" parameterType = "hashmap" >
+		UPDATE ATTCH_LIST SET TITLE = #{TITLE},
+					          EIS_CATG_NO = #{EIS_CATG_NO},
+					          INFO = #{INFO},
+					          ATTCH_QUERY = #{query_Text2},
+					          ATTCH_TYPE = #{ATTCH_TYPE}
+					          
+		WHERE ATTCH_NO = #{attch_NO}
+	</update>
+	
+	
+	
+	<insert id="addEisCate" parameterType = "hashmap" >
+		INSERT INTO EIS_CATEGORY(EIS_CATG_NO, EMP_NO, EIS_CATG_NM)
+		VALUES(EIS_CATEGORY_SEQ.NEXTVAL, #{sEmpNo}, #{Category_Text})
+	</insert>
+
+	<select id="getcatgCnt2" parameterType = "hashmap" resultType = "Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EIS_CATEGORY
+	</select>
+	
+	<select id="getcatgList2" parameterType = "hashmap" resultType="hashmap">
+		SELECT EIS_CATG_NM, EIS_CATG_NO
+		FROM EIS_CATEGORY
+		WHERE DEL_WHET = 0
+		ORDER BY EIS_CATG_NO ASC
+	</select>
+	
+	<update id = "catgDelete" parameterType="hashmap">
+		UPDATE EIS_CATEGORY SET DEL_WHET = 1
+		WHERE EIS_CATG_NO = #{EIS_CATG_NO}
+	</update>
+	
+	<select id="getAttSelecList" parameterType="hashmap" resultType="hashmap">
+      SELECT ATTCH_NO, EIS_CATG_NO, EMP_NO,TITLE,INFO,ATTCH_TYPE,ATTCH_QUERY
+      FROM ATTCH_LIST
+	</select>
+   
+	<select id="getAttSelecDetailList" parameterType="hashmap" resultType="hashmap">
+      SELECT ATTCH_NO, EIS_CATG_NO, EMP_NO, TITLE, INFO, ATTCH_TYPE, ATTCH_QUERY
+      FROM ATTCH_LIST
+      WHERE TITLE = #{TITLE}
+   </select>
+   
+   <select id="getTestQuery" parameterType="hashmap" resultType="hashmap">
+      ${Query}
+   </select>
+   
+   
+   <select id="getQuery1" parameterType="hashmap" resultType="hashmap">
+      ${query1}
+   </select>
+   
+   <select id="getQuery2" parameterType="hashmap" resultType="hashmap">
+      ${query2}
+   </select>
+   
+   <select id="getQuery3" parameterType="hashmap" resultType="hashmap">
+      ${query3}
+   </select>
+   
+   <select id="getQuery4" parameterType="hashmap" resultType="hashmap">
+      ${query4}
+   </select>
+   
+   <select id="getQuery5" parameterType="hashmap" resultType="hashmap">
+      ${query5}
+   </select>
+   
+   <select id="getQuery6" parameterType="hashmap" resultType="hashmap">
+      ${query6}
+   </select>
+   
+   <select id="getQuery7" parameterType="hashmap" resultType="hashmap">
+      ${query7}
+   </select>
+   
+   <select id="getQuery8" parameterType="hashmap" resultType="hashmap">
+      ${query8}
+   </select>
+   
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

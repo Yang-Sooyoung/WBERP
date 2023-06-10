@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="gods">
+
+	<select id="getGods" parameterType="hashmap" resultType="hashmap">
+	SELECT M.GODS_NM, M.SUMR, M.DIST, M.INTR, M.GOD_START_DAY, M.NOTE, M.LOAN_LIMT, M.REMK, M.LOAN_PERS, M.RNUM,
+	M.GODS_NO, M.DEL_WHET,M.LOAN_KIND , M.LOAN_PERD, M.COLT, M.GODS_INTR_TYPE, M.GODS_REPM_METH, M.PHOTO_ADDR
+	FROM (SELECT G.GODS_NM, G.SUMR, G.DIST, G.INTR, TO_CHAR(G.GOD_START_DAY, 'YYYY-MM-DD') AS GOD_START_DAY, G.NOTE, G.LOAN_LIMT, G.REMK, G.LOAN_PERS, ROW_NUMBER() OVER(ORDER BY G.GODS_NO DESC) AS RNUM,
+		  G.GODS_NO, G.DEL_WHET, MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD, MC3.CODE_NM AS COLT, MC4.CODE_NM AS GODS_INTR_TYPE, MC5.CODE_NM AS GODS_REPM_METH, GP.PHOTO_ADDR
+		    FROM GODS G INNER JOIN LOAN_KIND LK
+		                    ON G.GODS_NO = LK.GODS_NO
+		            INNER JOIN GODS_MANG_CODE MC1
+		                    ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+		                   AND MC1.BIG_FRAC = 1
+		         INNER JOIN LOAN_PERD LP
+		                ON G.GODS_NO = LP.GODS_NO
+		        INNER JOIN GODS_MANG_CODE MC2
+		                ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+		                AND MC2.BIG_FRAC = 2
+		        INNER JOIN COLT C
+		                 ON G.GODS_NO = C.GODS_NO
+		        INNER JOIN GODS_MANG_CODE MC3
+		                ON C.COLT_NO = MC3.SMAL_FRAC 
+		                    AND MC3.BIG_FRAC = 3
+		        INNER JOIN GODS_INTR_TYPE GI
+		                ON G.GODS_NO = GI.GODS_NO
+		        INNER JOIN GODS_MANG_CODE MC4
+		                ON GI.INTR_TYPE_NO = MC4.SMAL_FRAC 
+		            AND MC4.BIG_FRAC = 4
+		        INNER JOIN GODS_REPM_METH GR
+			            ON G.GODS_NO = GR.GODS_NO
+		        INNER JOIN GODS_MANG_CODE MC5
+			            ON GR.REPM_METH_NO = MC5.SMAL_FRAC 
+			        AND MC5.BIG_FRAC = 5
+		        INNER JOIN GODS_PHOTO GP
+			            ON G.GODS_NO = GP.GODS_NO
+		            WHERE 1 = 1
+				AND G.DEL_WHET = 0
+						<if test="godsName != null and productName != ''">
+							AND G.GODS_NM LIKE '%' || #{godsName} || '%'
+						</if>
+			         	<if test="loanKind_searchGbn != null and loanKind_searchGbn != '전체'">
+							AND LOAN_KIND_NO LIKE #{loanKind_searchGbn}
+						</if>
+				        <if test="intr_searchGbn != null and intr_searchGbn != '전체'">
+							AND INTR_TYPE_NO LIKE #{intr_searchGbn}
+						</if>
+				        <if test="repm_searchGbn != null and repm_searchGbn != '전체'">
+							AND REPM_METH_NO LIKE #{repm_searchGbn}
+						</if>
+						)M
+	WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getGodsCnt" parameterType="hashmap" resultType="Integer">
+	SELECT COUNT(*) AS CNT
+FROM(SELECT G.GODS_NM, G.SUMR, G.DIST, G.INTR, TO_CHAR(G.GOD_START_DAY, 'YYYY-MM-DD') AS GOD_START_DAY, G.NOTE, G.LOAN_LIMT, G.REMK, G.LOAN_PERS, ROW_NUMBER() OVER(ORDER BY G.GODS_NO DESC) AS RNUM,
+	G.GODS_NO, G.DEL_WHET
+    FROM GODS G INNER JOIN LOAN_KIND LK
+                    ON G.GODS_NO = LK.GODS_NO
+            INNER JOIN GODS_MANG_CODE MC1
+                    ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+                   AND MC1.BIG_FRAC = 1
+         INNER JOIN LOAN_PERD LP
+                ON G.GODS_NO = LP.GODS_NO
+        INNER JOIN GODS_MANG_CODE MC2
+                ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+                AND MC2.BIG_FRAC = 2
+        INNER JOIN COLT C
+                 ON G.GODS_NO = C.GODS_NO
+        INNER JOIN GODS_MANG_CODE MC3
+                ON C.COLT_NO = MC3.SMAL_FRAC 
+                    AND MC3.BIG_FRAC = 3
+        INNER JOIN GODS_INTR_TYPE GI
+                ON G.GODS_NO = GI.GODS_NO
+        INNER JOIN GODS_MANG_CODE MC4
+                ON GI.INTR_TYPE_NO = MC4.SMAL_FRAC 
+            AND MC4.BIG_FRAC = 4
+        INNER JOIN GODS_REPM_METH GR
+	            ON G.GODS_NO = GR.GODS_NO
+        INNER JOIN GODS_MANG_CODE MC5
+	            ON GR.REPM_METH_NO = MC5.SMAL_FRAC 
+	        AND MC5.BIG_FRAC = 5
+            
+        WHERE 1 = 1
+		AND G.DEL_WHET = 0
+			<if test="godsName != null and productName != ''">
+				AND G.GODS_NM LIKE '%' || #{godsName} || '%'
+			</if>
+	        <if test="loanKind_searchGbn != null and loanKind_searchGbn != '전체'">
+				AND LOAN_KIND_NO LIKE #{loanKind_searchGbn}
+			</if>
+	        <if test="intr_searchGbn != null and intr_searchGbn != '전체'">
+				AND INTR_TYPE_NO LIKE #{intr_searchGbn}
+			</if>
+	        <if test="repm_searchGbn != null and repm_searchGbn != '전체'">
+				AND REPM_METH_NO LIKE #{repm_searchGbn}
+			</if>
+					
+		)
+	</select>
+	
+	<select id="getGodsDetail" parameterType="hashmap" resultType="hashmap">
+	SELECT A1.GODS_NM,  A1.SUMR, A1.DIST, A1.INTR, A1.GOD_START_DAY, A1.NOTE, A1.LOAN_LIMT, A1.REMK, A1.LOAN_PERS,
+	A1.CODE_NM AS LOAN_KIND , A2.CODE_NM AS LOAN_PERD, A3.CODE_NM AS COLT, A4.CODE_NM AS GODS_INTR_TYPE, A5.CODE_NM AS GODS_REPM_METH, A6.PHOTO_ADDR
+	FROM (SELECT G.GODS_NM, G.SUMR, G.DIST, G.INTR, TO_CHAR(G.GOD_START_DAY, 'YYYY-MM-DD') AS GOD_START_DAY, G.NOTE, G.LOAN_LIMT, G.REMK, G.LOAN_PERS,
+	G.GODS_NO, MC.CODE_NM, G.DEL_WHET
+	FROM GODS G INNER JOIN LOAN_KIND LK
+	                    ON G.GODS_NO = LK.GODS_NO
+	            INNER JOIN GODS_MANG_CODE MC
+	                    ON LK.LOAN_KIND_NO = MC.SMAL_FRAC 
+	                   AND MC.BIG_FRAC = 1) A1 INNER JOIN 
+	                   (SELECT G.GODS_NO, MC.CODE_NM, G.DEL_WHET
+	                    FROM GODS G INNER JOIN LOAN_PERD LP
+	                                        ON G.GODS_NO = LP.GODS_NO
+	                                INNER JOIN GODS_MANG_CODE MC
+	                                        ON LP.LOAN_PERD_NO = MC.SMAL_FRAC 
+	                    AND MC.BIG_FRAC = 2) A2
+	                                                 ON A1.GODS_NO = A2.GODS_NO 
+	                                            INNER JOIN (SELECT G.GODS_NO, MC.CODE_NM, G.DEL_WHET
+	                    FROM GODS G INNER JOIN COLT C
+	                                        ON G.GODS_NO = C.GODS_NO
+	                                INNER JOIN GODS_MANG_CODE MC
+	                                        ON C.COLT_NO = MC.SMAL_FRAC 
+	                    AND MC.BIG_FRAC = 3) A3  
+	                                            ON A2.GODS_NO = A3.GODS_NO 
+	                                        INNER JOIN (SELECT G.GODS_NO, MC.CODE_NM, G.DEL_WHET
+	                    FROM GODS G INNER JOIN GODS_INTR_TYPE GI
+	                                        ON G.GODS_NO = GI.GODS_NO
+	                                INNER JOIN GODS_MANG_CODE MC
+	                                        ON GI.INTR_TYPE_NO = MC.SMAL_FRAC 
+	                    AND MC.BIG_FRAC = 4) A4  
+	                                            ON A3.GODS_NO = A4.GODS_NO
+	                                            INNER JOIN (SELECT G.GODS_NO, MC.CODE_NM, G.DEL_WHET
+	                    FROM GODS G INNER JOIN GODS_REPM_METH GR
+	                                        ON G.GODS_NO = GR.GODS_NO
+	                                INNER JOIN GODS_MANG_CODE MC
+	                                        ON GR.REPM_METH_NO = MC.SMAL_FRAC 
+	                    AND MC.BIG_FRAC = 5) A5  
+	                                            ON A4.GODS_NO = A5.GODS_NO
+	                                            INNER JOIN (SELECT G.GODS_NO, G.DEL_WHET, GP.PHOTO_ADDR
+	                    FROM GODS G INNER JOIN GODS_PHOTO GP
+	                                        ON G.GODS_NO = GP.GODS_NO
+	                               ) A6 
+	                                            ON A5.GODS_NO = A6.GODS_NO
+		                   
+		WHERE A1.DEL_WHET = 0
+		AND A1.GODS_NO = #{gods_no}
+	</select>
+	<insert id="godsAdd" parameterType="hashmap">
+		INSERT ALL
+	    	INTO GODS(GODS_NO, GODS_NM, EMP_NO, SUMR, DIST, INTR, LOAN_LIMT, NOTE, REMK, LOAN_PERS)
+			VALUES (GODS_SEQ.NEXTVAL, #{gods_nm}, ${sEmpNo}, #{sumr}, #{dist}, #{intr}, #{loan_limt}, #{note}, #{remk}, #{loan_pers})
+			    INTO LOAN_KIND(GODS_NO, LOAN_KIND_NO)
+			VALUES (GODS_SEQ.CURRVAL, #{loan_kind_searchGbn})
+			 INTO GODS_INTR_TYPE(GODS_NO, INTR_TYPE_NO)
+			VALUES (GODS_SEQ.CURRVAL, #{intr_type_searchGbn})
+			 INTO LOAN_PERD(GODS_NO, LOAN_PERD_NO)
+			VALUES (GODS_SEQ.CURRVAL, #{loan_perd_searchGbn})
+			  INTO GODS_REPM_METH(GODS_NO, REPM_METH_NO)
+			VALUES (GODS_SEQ.CURRVAL, #{repm_meth_searchGbn})
+			    INTO COLT(GODS_NO, COLT_NO)
+			VALUES (GODS_SEQ.CURRVAL, #{colt_searchGbn})
+				INTO GODS_PHOTO(GODS_NO, PHOTO_NO, PHOTO_ADDR)
+            VALUES(GODS_SEQ.CURRVAL, GODS_PHOTO_SEQ.NEXTVAL, #{photo_addr})
+			SELECT * FROM DUAL
+	</insert>
+	<update id="godsUpdate" parameterType="hashmap">
+			UPDATE GODS SET DIST = #{dist},
+                			LOAN_PERS = #{loan_pers},
+               				NOTE = #{note},
+                			REMK = #{remk}
+			WHERE GODS_NO = #{gods_no}
+	</update>
+	<update id="godsDelete" parameterType="hashmap">
+			UPDATE GODS SET DEL_WHET = 1
+			WHERE GODS_NO = #{gods_no}
+	</update>
+	
+	<select id="getCotrDayQGods" parameterType="hashmap" resultType="hashmap">
+			SELECT SALE_NO, CODE_NM, GODS_NO, GODS_NM, SUMR, DEL_WHET, COTR_DAY_Q, COTR_DAY_Y
+FROM(SELECT S.SALE_NO, CD.CODE_NM, G.GODS_NO, G.GODS_NM, G.SUMR, G.DEL_WHET,
+				       ROW_NUMBER() OVER(ORDER BY S.SALE_NO DESC) AS RNUM,
+                       TO_CHAR(C.COTR_DAY,'Q') AS COTR_DAY_Q, TO_CHAR(C.COTR_DAY,'YYYY') AS COTR_DAY_Y
+				FROM EMP E  INNER JOIN GODS G
+                                    ON E.EMP_NO = GODS_NO
+                            INNER JOIN CUST_COMP CC
+                                    ON E.EMP_NO = CC.EMP_NO
+                            INNER JOIN INSD_CUST I
+                                    ON CC.ENTP_NO = I.ENTP_NO
+                            INNER JOIN SALE S
+                                    ON I.CUST_NO = S.CUST_NO
+                            INNER JOIN COMN_CODE CD
+                                    ON S.PROG_COND = CD.SMAL_FRAC
+                                    AND CD.BIG_FRAC = 8
+                            INNER JOIN COTR_GODS CG
+                                    ON G.GODS_NO = CG.GODS_NO
+                            INNER JOIN COTR C
+	                 			    ON CG.COTR_NO = C.COTR_NO)M
+                            WHERE M.CODE_NM = '계약'
+                             AND M.DEL_WHET = 0
+				 <if test="cotr_day_y_searchGbn != null">
+					AND M.COTR_DAY_Y = #{cotr_day_y_searchGbn}
+					</if>
+				 <if test="cotr_day_q_searchGbn != null">
+					AND M.COTR_DAY_Q = #{cotr_day_q_searchGbn}
+					</if>
+	 </select>
+	<select id="getCotrDayQGodsCnt" parameterType="hashmap" resultType="Integer">
+			SELECT COUNT(*) AS CNT
+			FROM(SELECT S.SALE_NO, CD.CODE_NM, G.GODS_NO, G.GODS_NM, G.SUMR, G.DEL_WHET,
+				       ROW_NUMBER() OVER(ORDER BY S.SALE_NO DESC) AS RNUM,
+                       TO_CHAR(C.COTR_DAY,'Q') AS COTR_DAY_Q, TO_CHAR(C.COTR_DAY,'YYYY') AS COTR_DAY_Y
+				FROM EMP E  INNER JOIN GODS G
+                                    ON E.EMP_NO = GODS_NO
+                            INNER JOIN CUST_COMP CC
+                                    ON E.EMP_NO = CC.EMP_NO
+                            INNER JOIN INSD_CUST I
+                                    ON CC.ENTP_NO = I.ENTP_NO
+                            INNER JOIN SALE S
+                                    ON I.CUST_NO = S.CUST_NO
+                            INNER JOIN COMN_CODE CD
+                                    ON S.PROG_COND = CD.SMAL_FRAC
+                                    AND CD.BIG_FRAC = 8
+                            INNER JOIN COTR_GODS CG
+                                    ON G.GODS_NO = CG.GODS_NO
+                            INNER JOIN COTR C
+	                 			    ON CG.COTR_NO = C.COTR_NO)M
+                            WHERE M.CODE_NM = '계약'
+                             AND M.DEL_WHET = 0
+					 <if test="cotr_day_y_searchGbn != null">
+						AND M.COTR_DAY_Y = #{cotr_day_y_searchGbn}
+						</if>
+					 <if test="cotr_day_q_searchGbn != null">
+						AND M.COTR_DAY_Q = #{cotr_day_q_searchGbn}
+						</if>
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

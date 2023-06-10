@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="camp">
+
+	<select id="getCamp" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT CAMP_NO,CAMP_NM,REGL_SORT_CODE,REGL_SORT_CODE_NM
+		,STAT_CODE_NM,START_PERD,END_PERD,STAT_CODE,EMP_NO
+		FROM
+		(SELECT
+		CAMP_NO,CAMP_NM,
+		STAT_CODE,REGL_SORT_CODE,
+		TO_CHAR(START_PERD,'YYYY-MM-DD') AS START_PERD,
+		TO_CHAR(END_PERD,'YYYY-MM-DD') AS END_PERD,
+		ROW_NUMBER() OVER(ORDER BY
+		CAMP_NO DESC) AS RNUM,
+		C.EMP_NO,
+		DECODE(STAT_CODE,0,'요청',1,'종료',2,'거부',3,'승인',4,'진행','작성중') AS
+		STAT_CODE_NM,
+		DECODE(REGL_SORT_CODE,0,'정기',1,'비정기',2,'반기',3,'상시') AS
+		REGL_SORT_CODE_NM
+		FROM CAMP C INNER JOIN EMP E
+		ON C.EMP_NO=E.EMP_NO AND
+		DEL_WHET=0
+		WHERE 1=1
+		<if test="serachregl != -1">
+			AND REGL_SORT_CODE = #{serachregl}
+		</if>
+		<if test="serachstat != -1">
+			AND STAT_CODE = #{serachstat}
+		</if>
+		<if test="checkbox != null">
+			AND C.EMP_NO = #{sEmpNo}
+		</if>
+		<if test="startdate != '' and enddate != ''">
+			AND START_PERD &gt; = #{startdate}
+			AND END_PERD &lt; =
+			#{enddate}
+		</if>
+		) M
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+
+	<select id="getCampCnt" parameterType="hashmap"
+		resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CAMP C INNER JOIN EMP E
+		ON C.EMP_NO=E.EMP_NO
+		WHERE 1 = 1
+		<if test="serachregl != -1">
+			AND REGL_SORT_CODE = #{serachregl}
+		</if>
+		<if test="serachstat != -1">
+			AND STAT_CODE = #{serachstat}
+		</if>
+		<if test="checkbox != null">
+			AND C.EMP_NO = #{sEmpNo}
+		</if>
+		<if test="startdate != '' and enddate != ''">
+			AND START_PERD &gt; = #{startdate}
+			AND END_PERD &lt; =
+			#{enddate}
+		</if>
+	</select>
+
+	<!-- 캠페인 결과 쿼리 -->
+	<select id="getSendTable" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT *
+		FROM(SELECT NVL(ROUND(AVG(A.RECT_WHET),1),0) AS RECT_WHET,
+		NVL(ROUND(AVG(A.REAL_RECT_WHET),1),0) AS REAL_RECT_WHET, A.CAMP_NO,
+		A.CAMP_NM, A.START_PERD, A.END_PERD,
+		ROW_NUMBER() OVER(ORDER BY A.CAMP_NO DESC) AS RNUM
+		FROM(SELECT NVL(ROUND(AVG(RECT_WHET),1),0) AS RECT_WHET,
+		NVL(ROUND(AVG(REAL_RECT_WHET),1),0) AS REAL_RECT_WHET, C.CAMP_NO,
+		C.CAMP_NM, TO_CHAR(C.START_PERD,'YYYY-MM-DD') AS
+		START_PERD,TO_CHAR(C.END_PERD,'YYYY-MM-DD') AS
+		END_PERD
+		FROM KAKAO_SEND K INNER JOIN CAMP C
+		ON K.ETC1=C.CAMP_NO
+		WHERE C.STAT_CODE=1
+		GROUP BY C.CAMP_NO, C.CAMP_NM,
+		TO_CHAR(C.START_PERD,'YYYY-MM-DD'),TO_CHAR(C.END_PERD,'YYYY-MM-DD')
+		UNION ALL
+		SELECT NVL(ROUND(AVG(RECT_WHET),1),0) AS RECT_WHET,
+		NVL(ROUND(AVG(REAL_RECT_WHET),1),0) AS REAL_RECT_WHET, C.CAMP_NO,
+		C.CAMP_NM, TO_CHAR(C.START_PERD,'YYYY-MM-DD') AS
+		START_PERD,TO_CHAR(C.END_PERD,'YYYY-MM-DD') AS
+		END_PERD
+		FROM MSG_SEND M INNER JOIN CAMP C
+		ON M.ETC1=C.CAMP_NO
+		WHERE C.STAT_CODE=1
+		GROUP BY C.CAMP_NO, C.CAMP_NM,
+		TO_CHAR(C.START_PERD,'YYYY-MM-DD'),TO_CHAR(C.END_PERD,'YYYY-MM-DD')
+		UNION ALL
+		SELECT NVL(ROUND(AVG(RECT_WHET),1),0) AS RECT_WHET,
+		NVL(ROUND(AVG(REAL_RECT_WHET),1),0) AS REAL_RECT_WHET, C.CAMP_NO,
+		C.CAMP_NM, TO_CHAR(C.START_PERD,'YYYY-MM-DD') AS
+		START_PERD,TO_CHAR(C.END_PERD,'YYYY-MM-DD') AS
+		END_PERD
+		FROM EMAIL_SEND E INNER JOIN CAMP C
+		ON E.ETC1=C.CAMP_NO
+		WHERE C.STAT_CODE=1
+		GROUP BY C.CAMP_NO, C.CAMP_NM,
+		TO_CHAR(C.START_PERD,'YYYY-MM-DD'),TO_CHAR(C.END_PERD,'YYYY-MM-DD')) A
+		WHERE 1 = 1
+		<if test="startdate != '' and enddate != ''">
+			AND START_PERD &gt; = #{startdate}
+			AND END_PERD &lt; = #{enddate}
+		</if>
+		<if test="campnm != ''">
+			AND CAMP_NM LIKE '%' || #{campnm} || '%'
+		</if>
+		GROUP BY A.CAMP_NO, A.CAMP_NM, A.START_PERD,A.END_PERD
+		)M
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id="getSendTableCnt" parameterType="hashmap"
+		resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM (SELECT NVL(ROUND(AVG(A.RECT_WHET),1),0) AS
+		RECT_WHET, NVL(ROUND(AVG(A.REAL_RECT_WHET),1),0) AS REAL_RECT_WHET,
+		A.CAMP_NO, A.CAMP_NM, A.START_PERD, A.END_PERD,
+		ROW_NUMBER() OVER(ORDER BY A.CAMP_NO DESC) AS RNUM
+		FROM(SELECT NVL(ROUND(AVG(RECT_WHET),1),0) AS RECT_WHET,
+		NVL(ROUND(AVG(REAL_RECT_WHET),1),0) AS REAL_RECT_WHET, C.CAMP_NO,
+		C.CAMP_NM, TO_CHAR(C.START_PERD,'YYYY-MM-DD') AS
+		START_PERD,TO_CHAR(C.END_PERD,'YYYY-MM-DD') AS
+		END_PERD
+		FROM KAKAO_SEND K INNER JOIN CAMP C
+		ON K.ETC1=C.CAMP_NO
+		WHERE C.STAT_CODE=1
+		GROUP BY C.CAMP_NO, C.CAMP_NM,
+		TO_CHAR(C.START_PERD,'YYYY-MM-DD'),TO_CHAR(C.END_PERD,'YYYY-MM-DD')
+		UNION ALL
+		SELECT NVL(ROUND(AVG(RECT_WHET),1),0) AS RECT_WHET,
+		NVL(ROUND(AVG(REAL_RECT_WHET),1),0) AS REAL_RECT_WHET, C.CAMP_NO,
+		C.CAMP_NM, TO_CHAR(C.START_PERD,'YYYY-MM-DD') AS
+		START_PERD,TO_CHAR(C.END_PERD,'YYYY-MM-DD') AS
+		END_PERD
+		FROM MSG_SEND M INNER JOIN CAMP C
+		ON M.ETC1=C.CAMP_NO
+		WHERE C.STAT_CODE=1
+		GROUP BY C.CAMP_NO, C.CAMP_NM,
+		TO_CHAR(C.START_PERD,'YYYY-MM-DD'),TO_CHAR(C.END_PERD,'YYYY-MM-DD')
+		UNION ALL
+		SELECT NVL(ROUND(AVG(RECT_WHET),1),0) AS RECT_WHET,
+		NVL(ROUND(AVG(REAL_RECT_WHET),1),0) AS REAL_RECT_WHET, C.CAMP_NO,
+		C.CAMP_NM, TO_CHAR(C.START_PERD,'YYYY-MM-DD') AS
+		START_PERD,TO_CHAR(C.END_PERD,'YYYY-MM-DD') AS
+		END_PERD
+		FROM EMAIL_SEND E INNER JOIN CAMP C
+		ON E.ETC1=C.CAMP_NO
+		WHERE C.STAT_CODE=1
+		GROUP BY C.CAMP_NO, C.CAMP_NM,
+		TO_CHAR(C.START_PERD,'YYYY-MM-DD'),TO_CHAR(C.END_PERD,'YYYY-MM-DD')) A
+		WHERE 1 = 1
+		<if test="startdate != '' and enddate != ''">
+			AND START_PERD &gt; = #{startdate}
+			AND END_PERD &lt; = #{enddate}
+		</if>
+		<if test="campnm != ''">
+			AND CAMP_NM LIKE '%' || #{campnm} || '%'
+		</if>
+		GROUP BY A.CAMP_NO, A.CAMP_NM, A.START_PERD,A.END_PERD)
+	</select>
+
+	<!-- 캠페인 수정 -->
+	<select id="getCampDetail" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT C.CAMP_NO,
+		C.EMP_NO,CG.CUST_GROUP_NO,CGA.AREA_NO,E.EMP_NM, CAMP_NM,
+		CAMP_CONT,
+		REGL_SORT_CODE,D.DEPT_NM,
+		TO_CHAR(START_PERD,'YYYY-MM-DD') AS
+		START_PERD,TO_CHAR(END_PERD,'YYYY-MM-DD') AS END_PERD,
+		TO_CHAR(CG.CUST_JOIN_START_RANG,'YYYY-MM-DD') AS CUST_JOIN_START_RANG,
+		TO_CHAR(CG.CUST_JOIN_END_RANG,'YYYY-MM-DD') AS CUST_JOIN_END_RANG,
+		CG.SEX,CG.AGE_MIN,CG.AGE_MAX,A.AREA_NM
+		FROM CAMP C INNER JOIN EMP E
+		ON
+		C.EMP_NO =
+		E.EMP_NO
+		INNER JOIN HR_ISUC HR
+		ON C.EMP_NO=HR.EMP_NO
+		INNER JOIN
+		DEPT D
+		ON HR.DEPT_NO = D.DEPT_NO
+		INNER JOIN CUST_GROUP CG
+		ON C.CAMP_NO =
+		CG.CAMP_NO
+		INNER
+		JOIN CUST_GROUP_AREA CGA
+		ON CGA.CUST_GROUP_NO=
+		CG.CUST_GROUP_NO
+		INNER
+		JOIN AREA A
+		ON A.AREA_NO = CGA.AREA_NO
+		WHERE
+		C.CAMP_NO=#{campno}
+	</select>
+	<select id="getChanDetail" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT CY.CHAN_TYPE,CY.CHAN_TYPE_NO,CGC.CHAN_NO
+		FROM CAMP C
+		INNER JOIN CUST_GROUP CG
+		ON C.CAMP_NO = CG.CAMP_NO
+		INNER JOIN
+		CUST_GROUP_CHAN CGC
+		ON CG.CUST_GROUP_NO=CGC.CUST_GROUP_NO
+		INNER JOIN
+		CHAN CHAN
+		ON CHAN.CHAN_NO=CGC.CHAN_NO
+		INNER JOIN CHAN_TYPE CY
+		ON
+		CHAN.CHAN_TYPE_NO = CY.CHAN_TYPE_NO
+		WHERE C.CAMP_NO=#{campno}
+	</select>
+	<select id="getCampDept" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT C.CAMP_NO, C.EMP_NO,E.EMP_NM,
+		CAMP_NM, CAMP_CONT,
+		REGL_SORT_CODE,D.DEPT_NM,
+		TO_CHAR(START_PERD,'YYYY-MM-DD') AS
+		START_PERD,TO_CHAR(END_PERD,'YYYY-MM-DD')
+		AS END_PERD FROM CAMP C INNER
+		JOIN EMP E
+		ON C.EMP_NO = E.EMP_NO INNER
+		JOIN HR_ISUC HR ON
+		C.EMP_NO=HR.EMP_NO INNER JOIN DEPT D ON HR.DEPT_NO
+		= D.DEPT_NO WHERE
+		C.CAMP_NO=#{campno}
+	</select>
+	<update id="campUpdate" parameterType="hashmap">
+		UPDATE CAMP SET
+		CAMP_NM=#{campNm},
+		CAMP_CONT=#{campCont},
+		REGL_SORT_CODE=#{reglSortCode},
+		START_PERD=#{startPerd},
+		END_PERD=#{EndPerd}
+		WHERE CAMP_NO=#{campno}
+	</update>
+
+	<update id="custGroupUpdate" parameterType="hashmap">
+		UPDATE CUST_GROUP SET
+		CUST_JOIN_START_RANG=#{cust_join_start_rang},
+		CUST_JOIN_END_RANG=#{cust_join_end_rang},
+		SEX=#{sex},
+		AGE_MIN=#{age_min},
+		AGE_MAX=#{age_max}
+		WHERE CAMP_NO=#{campno}
+	</update>
+	<update id="custGroupAreaUpdate" parameterType="hashmap">
+		UPDATE
+		CUST_GROUP_AREA SET
+		AREA_NO=#{local}
+		WHERE CUST_GROUP_NO = #{custgroupno}
+	</update>
+	<update id="custGroupChanUpdate" parameterType="hashmap">
+		UPDATE
+		CUST_GROUP_CHAN SET
+		CHAN_NO=#{channel}
+		WHERE CUST_GROUP_NO = #{custgroupno}
+	</update>
+	<delete id="custGroupChanDelete" parameterType="hashmap">
+		DELETE FROM
+		CUST_GROUP_CHAN
+		WHERE
+		CUST_GROUP_NO = #{custgroupno}
+	</delete>
+	<delete id="campCustDelete" parameterType="hashmap">
+		DELETE FROM CAMP_CUST
+		WHERE
+		CAMP_NO = #{campno}
+	</delete>
+
+
+	<!-- ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ -->
+	<insert id="addCamp" parameterType="hashmap">
+		INSERT INTO CAMP(CAMP_NO,
+		EMP_NO, CAMP_NM, CAMP_CONT, REGL_SORT_CODE,
+		START_PERD,END_PERD)
+		VALUES(CAMP_SEQ.NEXTVAL,#{sEmpNo},#{campNm},#{campCont},#{reglSortCode},#{startPerd},#{EndPerd})
+	</insert>
+
+	<select id="getCampArea" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT AREA_NO,AREA_NM
+		FROM AREA
+	</select>
+
+	<select id="getCgList" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT CUST_GROUP_FILT_NO, CUST_GROUP_FILT_NM
+		FROM
+		CUST_GROUP_FILT
+	</select>
+
+	<select id="getCgData" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT CGF.CUST_GROUP_FILT_NO, CGF.CUST_GROUP_FILT_NM,
+		TO_CHAR(CGF.CUST_JOIN_START_RANG,'YYYY-MM-DD') AS
+		CUST_JOIN_START_RANG,
+		TO_CHAR(CGF.CUST_JOIN_END_RANG,'YYYY-MM-DD') AS
+		CUST_JOIN_END_RANG,
+		A.AREA_NO, CGF.SEX, CGF.AGE_MIN, CGF.AGE_MAX,
+		CGC.CHAN_TYPE_NO,CHAN_TYPE
+		FROM CUST_GROUP_FILT CGF INNER JOIN
+		CUST_GROUP_FILT_AREA CGFA
+		ON
+		CGF.CUST_GROUP_FILT_NO =
+		CGFA.CUST_GROUP_FILT_NO
+		INNER JOIN AREA A
+		ON CGFA.AREA_NO =
+		A.AREA_NO
+		INNER JOIN CUST_GROUP_FILT_CHAN CGC
+		ON
+		CGF.CUST_GROUP_FILT_NO=CGC.CUST_GROUP_FILT_NO
+		INNER JOIN CHAN_TYPE CHAN
+		ON CGC.CHAN_TYPE_NO = CHAN.CHAN_TYPE_NO
+		WHERE CGF.CUST_GROUP_FILT_NO =
+		#{custGroupFiltNo}
+		ORDER BY CGF.CUST_GROUP_FILT_NM
+	</select>
+
+	<insert id="addCampCg" parameterType="hashmap">
+		INSERT
+		INTO
+		CUST_GROUP(CUST_GROUP_NO, CAMP_NO, CUST_JOIN_START_RANG,
+		CUST_JOIN_END_RANG, SEX,
+		AGE_MIN,AGE_MAX)
+		VALUES (#{CampCgNum},
+		#{campNo2}, #{cust_join_start_rang}, #{cust_join_end_rang},#{sex},
+		#{age_min}, #{age_max})
+	</insert>
+
+	<insert id="cgAreaAdd" parameterType="hashmap">
+		INSERT INTO
+		CUST_GROUP_AREA(CUST_GROUP_NO,AREA_NO)
+		VALUES(#{CampCgNum},#{local})
+	</insert>
+
+	<select id="getCampNo" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT A.CAMP_NO AS CAMP_NO
+		FROM (SELECT CAMP_NO, ROW_NUMBER
+		() OVER (ORDER BY
+		CAMP_NO DESC) AS RNK
+		FROM CAMP ) A
+		WHERE A.RNK=1
+	</select>
+
+	<select id="getCampCgNum" resultType="String">
+		SELECT
+		CUST_GROUP_NO_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+
+	<select id="getChanList2" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT CHAN_NO, CHAN_TYPE_NO, CHAN_NM
+		FROM CHAN
+		WHERE DEL_WHET =0 AND (
+		1=1
+		<if test="chanCheck !=null and chanCheck != ''">
+			AND CHAN_TYPE_NO IN (${chanCheck})
+		</if>
+		)
+	</select>
+
+	<select id="getChanList" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT CHAN_NO, CHAN_TYPE_NO, CHAN_NM
+		FROM CHAN
+		WHERE
+		DEL_WHET =0 AND CHAN_TYPE_NO=#{campChanTypeNo}
+	</select>
+
+	<select id="getTempList" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT TEMP_NO,TEMP_NM, TEMP_CONT
+		FROM TEMP T INNER JOIN
+		CHAN_TYPE C
+		ON
+		T.CHAN_TYPE_NO=C.CHAN_TYPE_NO
+		WHERE
+		T.CHAN_TYPE_NO=#{campChanTypeNo}
+	</select>
+
+	<select id="getTempConData" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT TEMP_NO,CHAN_TYPE_NO,TEMP_CONT
+		FROM TEMP
+		WHERE
+		TEMP_NO=#{tempNo}
+	</select>
+
+	<select id="getCampCgNo" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT C.CUST_GROUP_NO AS CUST_GROUP_NO
+		FROM (SELECT
+		CUST_GROUP_NO, ROW_NUMBER()
+		OVER(ORDER BY CUST_GROUP_NO DESC) AS RNK
+		FROM CUST_GROUP) C
+		WHERE C.RNK = 1
+	</select>
+
+	<update id="addCgChanTemp" parameterType="hashmap">
+		UPDATE CUST_GROUP_CHAN
+		SET TEMP_NO=#{tempNo}
+		WHERE CUST_GROUP_NO=#{custGroupNo} AND CHAN_NO IN
+		(SELECT CHAN_NO
+		FROM CHAN
+		WHERE CHAN_TYPE_NO=#{campChanTypeNo})
+	</update>
+
+	<select id="getSimulData" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT T.TEMP_NO,C.CAMP_NO,C.CAMP_NM,
+		C.CAMP_CONT,CH.CHAN_TYPE_NO,
+		TO_CHAR(CG.CUST_JOIN_START_RANG,'YYYY-MM-DD') AS CUST_JOIN_START_RANG,
+		TO_CHAR( CG.CUST_JOIN_END_RANG,'YYYY-MM-DD') AS CUST_JOIN_END_RANG,
+		DECODE(CG.SEX,0,'남자',1,'여자') AS SEX,
+		DECODE(C.REGL_SORT_CODE,0,'정기',1,'비정기') AS REGL_SORT_CODE, CG.AGE_MIN,
+		CG.AGE_MAX,
+		TO_CHAR(C.START_PERD,'YYYY-MM-DD') AS START_PERD,
+		TO_CHAR(C.END_PERD,'YYYY-MM-DD') AS END_PERD,
+		T.TEMP_NM,T.TEMP_CONT,CH.CHAN_NM,A.AREA_NM,CT.CHAN_TYPE
+		FROM CAMP C
+		INNER JOIN CUST_GROUP CG
+		ON C.CAMP_NO=CG.CAMP_NO
+		INNER JOIN
+		CUST_GROUP_CHAN CGC
+		ON CG.CUST_GROUP_NO=CGC.CUST_GROUP_NO
+		INNER JOIN
+		CUST_GROUP_AREA CGA
+		ON
+		CG.CUST_GROUP_NO=CGA.CUST_GROUP_NO
+		INNER JOIN TEMP
+		T
+		ON CGC.TEMP_NO=T.TEMP_NO
+		INNER JOIN CHAN CH
+		ON CGC.CHAN_NO=CH.CHAN_NO
+		INNER JOIN AREA A
+		ON
+		CGA.AREA_NO=A.AREA_NO
+		INNER JOIN CHAN_TYPE CT
+		ON CH.CHAN_TYPE_NO=CT.CHAN_TYPE_NO
+		WHERE C.CAMP_NO=#{campNo2}
+	</select>
+
+	<select id="getCampCustList" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT DISTINCT RA.CUST_NO, RA.CHAN_TYPE_NO, OC.NM
+		FROM CUST_GROUP_FILT
+		CGF INNER JOIN CUST_GROUP_FILT_CHAN CGFC
+		ON
+		CGF.CUST_GROUP_FILT_NO=CGFC.CUST_GROUP_FILT_NO
+		INNER JOIN CHAN_TYPE CT
+		ON CGFC.CHAN_TYPE_NO=CT.CHAN_TYPE_NO
+		INNER JOIN RECP_AGRE RA
+		ON
+		CT.CHAN_TYPE_NO=RA.CHAN_TYPE_NO
+		INNER JOIN OTSD_CUST OC
+		ON
+		RA.CUST_NO=OC.CUST_NO
+		INNER JOIN CUST_GROUP_FILT_AREA CGFA
+		ON
+		CGF.CUST_GROUP_FILT_NO=CGFA.CUST_GROUP_FILT_NO
+		INNER JOIN AREA A
+		ON
+		CGFA.AREA_NO=A.AREA_NO
+		WHERE 1=1
+		<if
+			test="cust_join_start_rang != null and cust_join_start_rang != '' and cust_join_end_rang != null and cust_join_end_rang != ''">
+			AND OC.REG_DATE &gt; = #{cust_join_start_rang}
+			AND OC.REG_DATE
+			&lt; = #{cust_join_end_rang}
+		</if>
+		<if test="local != 0">
+			AND OC.ADDR LIKE '%'||#{areaNm}||'%'
+		</if>
+		<if test="age_min != null and age_min !='' and age_min !=' '">
+			AND (TO_CHAR(SYSDATE,'YYYY')-TO_CHAR(OC.BIRTH,'YYYY'))
+			&gt; = #{age_min}
+		</if>
+		<if test="age_max != null and age_max !='' and age_max !=' '">
+			AND (TO_CHAR(SYSDATE,'YYYY')-TO_CHAR(OC.BIRTH,'YYYY'))
+			&lt; = #{age_max}
+		</if>
+		<if test="sex != null">
+			AND OC.SEX = #{sex}
+		</if>
+		<if test="chanCheck !=null and chanCheck != ''">
+			AND RA.CHAN_TYPE_NO IN (${chanCheck})
+		</if>
+	</select>
+
+	<select id="getCustCountData" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT COUNT(*) AS CUST_CNT
+		FROM (SELECT DISTINCT RA.CUST_NO,
+		RA.CHAN_TYPE_NO, OC.NM
+		FROM CUST_GROUP_FILT CGF INNER JOIN
+		CUST_GROUP_FILT_CHAN CGFC
+		ON
+		CGF.CUST_GROUP_FILT_NO=CGFC.CUST_GROUP_FILT_NO
+		INNER JOIN CHAN_TYPE CT
+		ON CGFC.CHAN_TYPE_NO=CT.CHAN_TYPE_NO
+		INNER JOIN RECP_AGRE RA
+		ON
+		CT.CHAN_TYPE_NO=RA.CHAN_TYPE_NO
+		INNER JOIN OTSD_CUST OC
+		ON
+		RA.CUST_NO=OC.CUST_NO
+		INNER JOIN CUST_GROUP_FILT_AREA CGFA
+		ON
+		CGF.CUST_GROUP_FILT_NO=CGFA.CUST_GROUP_FILT_NO
+		INNER JOIN AREA A
+		ON
+		CGFA.AREA_NO=A.AREA_NO
+		WHERE 1=1
+		<if
+			test="cust_join_start_rang != null and cust_join_start_rang != '' and cust_join_end_rang != null and cust_join_end_rang != ''">
+			AND TO_CHAR(OC.REG_DATE,'YYYY-MM-DD') &gt; =
+			#{cust_join_start_rang}
+			AND TO_CHAR(OC.REG_DATE,'YYYY-MM-DD') &lt; =
+			#{cust_join_end_rang}
+		</if>
+		<if test="local != 0">
+			AND OC.ADDR LIKE '%'||#{areaNm}||'%'
+		</if>
+		<if test="age_min != null and age_min !='' and age_min !=' '">
+			AND (TO_CHAR(SYSDATE,'YYYY')-TO_CHAR(OC.BIRTH,'YYYY'))
+			&gt; = #{age_min}
+		</if>
+		<if test="age_max != null and age_max !='' and age_max !=' '">
+			AND (TO_CHAR(SYSDATE,'YYYY')-TO_CHAR(OC.BIRTH,'YYYY'))
+			&lt; = #{age_max}
+		</if>
+		<if test="sex != null">
+			AND OC.SEX = #{sex}
+		</if>
+		<if test="chanCheck !=null and chanCheck != ''">
+			AND RA.CHAN_TYPE_NO IN (${chanCheck})
+		</if>
+		)
+	</select>
+
+	<insert id="addCampCust" parameterType="hashmap">
+		INSERT INTO
+		CAMP_CUST(CAMP_NO,
+		CUST_NO,CHAN_TYPE_NO,PRED_RECT_WHET,PRED_REAL_RECT_WHET)
+		VALUES(#{campNo2}, #{campCustNo}, #{campChanTypeNo}, 0, 1)
+	</insert>
+
+	<insert id="cgChanAdd" parameterType="hashmap">
+		INSERT INTO
+		CUST_GROUP_CHAN(CUST_GROUP_NO,CHAN_NO)
+		VALUES
+		(#{custGroupNo},#{chanNo})
+	</insert>
+
+	<select id="getCampChanTypeList" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT DISTINCT C.CHAN_TYPE_NO, CT.CHAN_TYPE
+		FROM CAMP_CUST
+		C INNER JOIN CHAN_TYPE CT
+		ON C.CHAN_TYPE_NO=CT.CHAN_TYPE_NO
+		WHERE CAMP_NO=#{campNo2}
+	</select>
+
+	<select id="getKakaoRectWhet" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT ROUND(AVG(RECT_WHET),1) AS RECT_WHET,
+		ROUND(AVG(REAL_RECT_WHET),1) AS REAL_RECT_WHET
+		FROM KAKAO_SEND
+		WHERE
+		ETC2 IN (SELECT CUST_NO
+		FROM CAMP_CUST
+		WHERE CHAN_TYPE_NO=2 AND CAMP_NO=#{campNo2})
+		AND TO_CHAR(SEND_DATE,'YYYY-MM-DD') &lt; #{startPerd}
+	</select>
+
+	<select id="getSmsRectWhet" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT ROUND(AVG(RECT_WHET),1) AS RECT_WHET,
+		ROUND(AVG(REAL_RECT_WHET),1) AS REAL_RECT_WHET
+		FROM EMAIL_SEND
+		WHERE
+		ETC2 IN (SELECT CUST_NO
+		FROM CAMP_CUST
+		WHERE CHAN_TYPE_NO=4 AND CAMP_NO=#{campNo2})
+		AND TO_CHAR(SEND_DATE,'YYYY-MM-DD') &lt; #{startPerd}
+	</select>
+
+	<select id="getEmailRectWhet" parameterType="hashmap"
+		resultType="hashmap">
+		SELECT ROUND(AVG(RECT_WHET),1) AS RECT_WHET,
+		ROUND(AVG(REAL_RECT_WHET),1) AS REAL_RECT_WHET
+		FROM MSG_SEND
+		WHERE ETC2
+		IN (SELECT CUST_NO
+		FROM CAMP_CUST
+		WHERE CHAN_TYPE_NO=1 AND CAMP_NO=#{campNo2})
+		AND TO_CHAR(SEND_DATE,'YYYY-MM-DD') &lt; #{startPerd}
+	</select>
+
+	<update id="updateCampCust" parameterType="hashmap">
+		UPDATE CAMP_CUST SET
+		PRED_RECT_WHET = CASE WHEN CHAN_TYPE_NO=2
+		THEN (SELECT NVL(ROUND(AVG(RECT_WHET)),0)
+		FROM KAKAO_SEND
+		WHERE ETC2=#{campCustNo})
+		WHEN CHAN_TYPE_NO=1
+		THEN (SELECT NVL(ROUND(AVG(RECT_WHET)),0)
+		FROM MSG_SEND
+		WHERE ETC2=#{campCustNo})
+		ELSE (SELECT NVL(ROUND(AVG(RECT_WHET)),0)
+		FROM EMAIL_SEND
+		WHERE ETC2=#{campCustNo})
+		END,
+		PRED_REAL_RECT_WHET = CASE WHEN CHAN_TYPE_NO=2
+		THEN (SELECT NVL(ROUND(AVG(REAL_RECT_WHET)),0)
+		FROM KAKAO_SEND
+		WHERE ETC2=#{campCustNo})
+		WHEN CHAN_TYPE_NO=1
+		THEN (SELECT NVL(ROUND(AVG(REAL_RECT_WHET)),0)
+		FROM MSG_SEND
+		WHERE ETC2=#{campCustNo})
+		ELSE (SELECT NVL(ROUND(AVG(REAL_RECT_WHET)),0)
+		FROM EMAIL_SEND
+		WHERE ETC2=#{campCustNo})
+		END
+		WHERE CAMP_NO=#{campNo2} AND CUST_NO=#{campCustNo}
+	</update>
+
+	<update id="updateStat" parameterType="hashmap">
+		UPDATE CAMP SET STAT_CODE
+		= #{statcode}
+		WHERE CAMP_NO = #{campno}
+	</update>
+</mapper>

@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="edu">
+	<select id="getEduCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EDU
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND EDU_FILD LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND EDU_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getEduList" resultType="hashmap">
+		   SELECT A.EDU_NO, A.EDU_FILD, A.EDU_NM, A.NM, EDU_TIME ,EDU_DATE,A.EDU_CENTER_NM, A.SIGN_PERS ,A.EMP_NM
+		FROM ( SELECT EDU_NO, EDU_FILD, EDU_NM, NM, TO_CHAR(EDU_TIME,'HH12:MI:SS') AS EDU_TIME , TO_CHAR(EDU_DATE,'YYYY-MM-DD') AS EDU_DATE,EDU_CENTER_NM, SIGN_PERS,EMP_NM,
+              		  ROW_NUMBER() OVER(ORDER BY EDU_NO ASC) AS RNUM
+       		   FROM EDU E INNER JOIN EDU_PERS P
+       		   		ON E.EDU_PERS_NO = P.EDU_PERS_NO
+       		   		INNER JOIN EDU_CENTER_INFO I
+                    ON E.EDU_CENTER_NO = I.EDU_CENTER_NO
+                    INNER JOIN EMP M
+                    ON E.EMP_NO = M.EMP_NO 
+       		   		WHERE E.DEL = 0
+       		   	 <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND EDU_FILD LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND EDU_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+			  ) A
+		WHERE A.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id="getEduDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT E.EDU_NO, E.EDU_FILD, E.EDU_NM, P.EDU_PERS_NO, P.NM, TO_CHAR(E.EDU_TIME,'HH12:MI') AS EDU_TIME, TO_CHAR(E.EDU_DATE,'YYYY-MM-DD') AS EDU_DATE, I.EDU_CENTER_NO, I.EDU_CENTER_NM, E.SIGN_PERS, M.EMP_NO, M.EMP_NM
+		FROM EDU E INNER JOIN EDU_PERS P
+       		   		ON E.EDU_PERS_NO = P.EDU_PERS_NO
+       		   		INNER JOIN EDU_CENTER_INFO I
+                    ON E.EDU_CENTER_NO = I.EDU_CENTER_NO
+                    INNER JOIN EMP M
+                    ON E.EMP_NO = M.EMP_NO
+		WHERE E.EDU_NO = #{edu_no}
+	</select>
+	
+	<insert id="eduAdd" parameterType="hashmap">
+		INSERT INTO EDU(EDU_NO, EDU_FILD, EDU_NM, EDU_TIME, EDU_DATE, SIGN_PERS, EDU_CENTER_NO, EDU_PERS_NO , EMP_NO)
+		VALUES(EDU_SEQ.NEXTVAL, #{edu_fild}, #{edu_nm}, TO_DATE(#{edu_time},'HH24:MI'),#{edu_date},#{sign_pers}, #{edu_center_no} , #{edu_pers_no} , #{sEmpNo}) 
+	</insert>
+	
+	<delete id="eduDelete" parameterType="hashmap">
+		UPDATE EDU SET DEL = 1
+		WHERE EDU_NO = #{edu_no}
+	 </delete>
+	 
+	 <update id="eduUpdate" parameterType="hashmap">
+	 	  UPDATE EDU SET
+	 			 EDU_FILD = #{edu_fild},
+	 			 EDU_NM = #{edu_nm},
+	 			 EDU_TIME = TO_DATE(#{edu_time},'HH24:MI'),
+	 			 EDU_DATE = #{edu_date},
+	 			 SIGN_PERS = #{sign_pers},
+	 			 EDU_CENTER_NO = #{edu_center_no},
+	 			 EDU_PERS_NO = #{edu_pers_no}
+	 	WHERE EDU_NO = #{edu_no}
+	 </update>
+	 
+	 <select id="getEduaplyCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EDU_APLY E 
+		INNER JOIN EMP M
+        ON E.EMP_NO = M.EMP_NO
+		WHERE EDU_NO = #{edu_no}
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND M.EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getEduaplyList" resultType="hashmap">
+		SELECT A.EDU_NO , A.EMP_NO ,A.EMP_NM,A.APLY_DAY , A.STAT
+		FROM ( SELECT E.EDU_NO, E.EMP_NO, M.EMP_NM, TO_CHAR(E.APLY_DAY,'YYYY-MM-DD') AS APLY_DAY, E.STAT,
+              		  ROW_NUMBER() OVER(ORDER BY E.EMP_NO ASC) AS RNUM
+       		   FROM EDU_APLY E 
+       		   		INNER JOIN EDU D
+       		   		ON E.EDU_NO = D.EDU_NO
+                    INNER JOIN EMP M
+                    ON E.EMP_NO = M.EMP_NO 
+       		   		WHERE 1 = 1
+       		   	 <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND M.EMP_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+			  ) A
+		WHERE EDU_NO = #{edu_no} AND A.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	 </select>
+	 
+	 <insert id="eduaplyAdd" parameterType="hashmap">
+		INSERT INTO EDU_APLY(EDU_NO, EMP_NO, APLY_DAY, STAT )
+		VALUES(#{edu_no}, #{sEmpNo}, SYSDATE , '신청완료') 
+	</insert>
+	 
+	 <delete id="eduaplyDelete" parameterType="hashmap">
+		DELETE FROM EDU_APLY
+		WHERE EMP_NO = #{sEmpNo}
+	 </delete>
+	 
+	 
+	 <!-- 교육장 -->
+	 
+	 <select id="getEducenterCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EDU_CENTER_INFO 
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND EDU_CENTER_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND ADDR LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getEducenterList" resultType="hashmap">
+		SELECT A.EDU_CENTER_NO, A.EDU_CENTER_NM, A.ADDR, A.PHONE_NUM, A.ACPT_PSBL_PERS
+		FROM ( SELECT EDU_CENTER_NO, EDU_CENTER_NM, ADDR, PHONE_NUM , ACPT_PSBL_PERS,
+              		  ROW_NUMBER() OVER(ORDER BY EDU_CENTER_NO ASC) AS RNUM
+       		   FROM EDU_CENTER_INFO 
+       		   WHERE 1 = 1
+                <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND EDU_CENTER_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND ADDR LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+			  ) A
+		WHERE A.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id="getEducenterDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT EDU_CENTER_NO, EDU_CENTER_NM, ADDR, PHONE_NUM , ACPT_PSBL_PERS , PHOTO_ADDR
+		FROM EDU_CENTER_INFO
+		WHERE EDU_CENTER_NO = #{edu_center_no}
+	</select>
+	
+	<insert id="educenterAdd" parameterType="hashmap">
+		INSERT INTO EDU_CENTER_INFO(EDU_CENTER_NO, EDU_CENTER_NM, ADDR, PHONE_NUM , ACPT_PSBL_PERS , PHOTO_ADDR)
+		VALUES(EDU_CENTER_INFO_SEQ.NEXTVAL,#{edu_center_nm},#{addr},#{phone_num},#{acpt_psbl_pers} ,#{photo_addr}) 
+	</insert>
+	
+	<delete id="educenterDelete" parameterType="hashmap">
+		DELETE FROM EDU_CENTER_INFO
+		WHERE EDU_CENTER_NO = #{edu_center_no}
+	 </delete>
+	 
+	 <update id="educenterUpdate" parameterType="hashmap">
+		UPDATE EDU_CENTER_INFO SET 
+				EDU_CENTER_NM = #{edu_center_nm},
+		        ADDR = #{addr},
+		        PHONE_NUM = #{phone_num},
+		        ACPT_PSBL_PERS = #{acpt_psbl_pers},
+		        PHOTO_ADDR = #{photo_addr}
+		WHERE EDU_CENTER_NO = #{edu_center_no}
+	</update>
+	 
+	  
+	  <!-- 교육자 -->
+	 
+	 <select id="getEdupersCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EDU_PERS
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND CHARGE_EDU LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getEdupersList" resultType="hashmap">
+	  SELECT A.EDU_PERS_NO, A.NM, A.CELL_NUM, A.CHARGE_EDU
+		FROM ( SELECT EDU_PERS_NO, NM, CELL_NUM , CHARGE_EDU
+              ,ROW_NUMBER() OVER(ORDER BY EDU_PERS_NO ASC) AS RNUM
+			   FROM EDU_PERS
+       		   WHERE 1 = 1
+                  <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND CHARGE_EDU LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+			  ) A
+		WHERE A.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id="getEdupersDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT EDU_PERS_NO, NM, CELL_NUM ,CHARGE_EDU,PHOTO_ADDR
+		FROM EDU_PERS 
+        WHERE EDU_PERS_NO = #{edu_pers_no}
+	</select>
+	
+	<insert id="edupersAdd" parameterType="hashmap">
+		INSERT INTO EDU_PERS(EDU_PERS_NO, NM, CELL_NUM , CHARGE_EDU, PHOTO_ADDR)
+		VALUES(EDU_PERS_SEQ.NEXTVAL,#{nm}, #{cell_num},#{charge_edu} ,#{photo_addr}) 
+	</insert>
+	
+	<delete id="edupersDelete" parameterType="hashmap">
+		DELETE FROM EDU_PERS
+		WHERE EDU_PERS_NO = #{edu_pers_no}
+	 </delete>
+	 
+	  <update id="edupersUpdate" parameterType="hashmap">
+		UPDATE  EDU_PERS SET 
+				NM = #{nm},
+		        CELL_NUM = #{cell_num},
+		        CHARGE_EDU = #{charge_edu},
+		        PHOTO_ADDR = #{photo_addr}
+		WHERE EDU_PERS_NO = #{edu_pers_no} 
+	  </update>
+	  
+	  <update id="eduperscarrUpdate" parameterType="hashmap">
+		UPDATE  EDU_PERS_CARR SET 
+				CARR_NM = #{carr_nm},		  
+		        START_DAY = #{start_day},
+		        END_DAY = #{end_day},
+		        AGNC_NM = #{agnc_nm}
+		WHERE EDU_PERS_CARR_NO = #{edu_pers_carr_no} 
+	  </update>
+	 <insert id="eduperscarrAdd" parameterType="hashmap">
+		INSERT INTO EDU_PERS_CARR(EDU_PERS_CARR_NO, EDU_PERS_NO,  CARR_NM, START_DAY,END_DAY, AGNC_NM)
+		VALUES(EDU_PERS_CARR_SEQ.NEXTVAL,#{edu_pers_no},#{carr_nm},#{start_day},#{end_day},#{agnc_nm}) 
+	</insert>
+	
+	<delete id="eduperscarrDelete" parameterType="hashmap">
+		DELETE FROM EDU_PERS_CARR
+		WHERE EDU_PERS_CARR_NO = #{edu_pers_carr_no} 
+	 </delete>
+	<select id="getEduperscarrCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EDU_PERS_CARR
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND CARR_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND AGNC_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getEduperscarrList" resultType="hashmap">
+	  SELECT EDU_PERS_NO,EDU_PERS_CARR_NO , CARR_NM, TO_CHAR(START_DAY,'YYYY-MM-DD') AS START_DAY, TO_CHAR(END_DAY,'YYYY-MM-DD') AS END_DAY, AGNC_NM
+		FROM ( SELECT EDU_PERS_NO,EDU_PERS_CARR_NO , CARR_NM, START_DAY, END_DAY , AGNC_NM
+              ,ROW_NUMBER() OVER(ORDER BY EDU_PERS_CARR_NO ASC) AS RNUM
+			   FROM EDU_PERS_CARR
+       		   WHERE 1 = 1
+                  <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND CARR_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND AGNC_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if> 
+			  ) A
+		WHERE EDU_PERS_NO = #{edu_pers_no} AND A.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select> 
+</mapper>

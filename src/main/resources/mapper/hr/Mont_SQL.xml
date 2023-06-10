@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="mont">
+	<select id="getMontCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EMP E INNER JOIN MONT_SORT_SAL_LIST M
+		                   ON E.EMP_NO = M.EMP_NO
+		           INNER JOIN SAL_DETL_BRED S
+		                   ON M.MONT_SORT_SAL_LIST_NO = S.MONT_SORT_SAL_LIST_NO
+		           INNER JOIN HR_ISUC H
+		                   ON E.EMP_NO = H.EMP_NO
+		           INNER JOIN DEPT D
+		                   ON H.DEPT_NO = D.DEPT_NO
+		           INNER JOIN POSN P
+		                   ON H.POSN_NO = P.POSN_NO
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND P.POSN_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND E.EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 3">
+					AND M.STAD_YEAR LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getMontList" parameterType="hashmap" resultType="hashmap"><!-- price:기본급,  price1:국민연금, price2:고용보험, price3:건강보험, price4:산재보험 -->
+		SELECT M.MONT_SORT_SAL_LIST_NO, M.EMP_NO, M.EMP_NM, M.DEPT_NM, M.POSN_NM, M.SALARY, TO_CHAR(M.PRICE1,'999,999,999,999,999') AS PRICE1,TO_CHAR(M.PRICE2,'999,999,999,999,999') AS PRICE2,
+		       TO_CHAR(M.PRICE3,'999,999,999,999,999') AS PRICE3, TO_CHAR(M.PRICE4,'999,999,999,999,999') AS PRICE4, TO_CHAR(M.PRICE,'999,999,999,999,999') AS PRICE,
+		       TO_CHAR(TRUNC(M.PRICE1+M.PRICE2+M.PRICE3+M.PRICE4),'999,999,999,999,999') AS GONG, TO_CHAR(TRUNC(M.SUM-(M.PRICE1+M.PRICE2+M.PRICE3+M.PRICE4)),'999,999,999,999,999') AS REALSAL, M.STAD_YEAR, M.SAL_CODE, TO_CHAR(M.SUM,'999,999,999,999,999') AS SUM
+		FROM (  SELECT M.MONT_SORT_SAL_LIST_NO, E.EMP_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, TO_CHAR(TRUNC(A.ANUL_SAL/12), '999,999,999,999,999') AS SALARY,
+				       TRUNC((A.ANUL_SAL/12)*0.045) AS PRICE1, TRUNC((A.ANUL_SAL/12)*0.08) AS PRICE2, TRUNC((A.ANUL_SAL/12)*0.03335) AS PRICE3, TRUNC((A.ANUL_SAL/12)*0.0763/10) AS PRICE4,  
+					   TO_CHAR(M.STAD_YEAR, 'YYYY-MM-DD') AS STAD_YEAR, ROW_NUMBER() OVER(ORDER BY M.MONT_SORT_SAL_LIST_NO DESC) AS RNUM, S.PRICE,
+					   DECODE(S.SAL_CODE, 0, '기본급', 1, '시간외근로수당', 2, '상여금', 3, '연차수당', 4, '직책수당', 5, '포상') AS SAL_CODE, SD.SUM
+		        FROM EMP E INNER JOIN MONT_SORT_SAL_LIST M
+		                           ON E.EMP_NO = M.EMP_NO
+		                   INNER JOIN (SELECT MONT_SORT_SAL_LIST_NO, SUM(PRICE) AS SUM
+		                               FROM SAL_DETL_BRED
+		                               GROUP BY MONT_SORT_SAL_LIST_NO) SD
+		                           ON M.MONT_SORT_SAL_LIST_NO = SD.MONT_SORT_SAL_LIST_NO
+		                   INNER JOIN HR_ISUC H
+		                           ON E.EMP_NO = H.EMP_NO
+		                   INNER JOIN DEPT D
+		                           ON H.DEPT_NO = D.DEPT_NO
+		                   INNER JOIN POSN P
+		                           ON H.POSN_NO = P.POSN_NO
+		                   INNER JOIN ANUL_SAL A
+		                           ON M.EMP_NO = A.EMP_NO 
+		                   INNER JOIN SAL_DETL_BRED S
+		                           ON M.MONT_SORT_SAL_LIST_NO = S.MONT_SORT_SAL_LIST_NO
+		        WHERE A.STAD_YEAR = TO_CHAR(SYSDATE, 'YYYY')
+		        AND SAL_CODE = 0
+		     <if test="searchTxt != null and searchTxt != ''">
+				  <choose>
+					  <when test="searchGbn eq 0">
+						  AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+					  </when>
+					  <when test="searchGbn eq 1">
+						  AND P.POSN_NM LIKE '%' || #{searchTxt} || '%'
+					  </when>
+					  <when test="searchGbn eq 2">
+					  	  AND E.EMP_NM LIKE '%' || #{searchTxt} || '%'
+					  </when>
+					  <when test="searchGbn eq 3">
+						  AND M.STAD_YEAR LIKE '%' || #{searchTxt} || '%'
+					  </when>
+				  </choose>
+			  </if>
+		      ) M
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getMont" parameterType="hashmap" resultType="hashmap">
+		SELECT M.MONT_SORT_SAL_LIST_NO, M.EMP_NO, M.EMP_NM, M.DEPT_NM, M.POSN_NM, M.SALARY, TO_CHAR(M.PRICE1,'999,999,999,999,999') AS PRICE1,TO_CHAR(M.PRICE2,'999,999,999,999,999') AS PRICE2,
+		       TO_CHAR(M.PRICE3,'999,999,999,999,999') AS PRICE3, TO_CHAR(M.PRICE4,'999,999,999,999,999') AS PRICE4, TO_CHAR(M.PRICE,'999,999,999,999,999') AS PRICE,
+		       TO_CHAR(TRUNC(M.PRICE1+M.PRICE2+M.PRICE3+M.PRICE4),'999,999,999,999,999') AS GONG, TO_CHAR(TRUNC(M.SUM-(M.PRICE1+M.PRICE2+M.PRICE3+M.PRICE4)),'999,999,999,999,999') AS REALSAL,  M.STAD_YEAR, M.SAL_CODE, TO_CHAR(M.SUM,'999,999,999,999,999') AS SUM
+		FROM (  SELECT M.MONT_SORT_SAL_LIST_NO, E.EMP_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, TO_CHAR(TRUNC(A.ANUL_SAL/12), '999,999,999,999,999') AS SALARY,
+				       TRUNC((A.ANUL_SAL/12)*0.045) AS PRICE1, TRUNC((A.ANUL_SAL/12)*0.08) AS PRICE2, TRUNC((A.ANUL_SAL/12)*0.03335) AS PRICE3, TRUNC((A.ANUL_SAL/12)*0.0763/10) AS PRICE4,  
+					   TO_CHAR(M.STAD_YEAR, 'YYYY-MM-DD') AS STAD_YEAR, ROW_NUMBER() OVER(ORDER BY M.MONT_SORT_SAL_LIST_NO DESC) AS RNUM, S.PRICE,
+					   DECODE(S.SAL_CODE, 0, '기본급', 1, '시간외근로수당', 2, '상여금', 3, '연차수당', 4, '직책수당', 5, '포상') AS SAL_CODE, SD.SUM
+		        FROM EMP E INNER JOIN MONT_SORT_SAL_LIST M
+		                           ON E.EMP_NO = M.EMP_NO
+		                   INNER JOIN (SELECT MONT_SORT_SAL_LIST_NO, SUM(PRICE) AS SUM
+		                               FROM SAL_DETL_BRED
+		                               GROUP BY MONT_SORT_SAL_LIST_NO) SD
+		                           ON M.MONT_SORT_SAL_LIST_NO = SD.MONT_SORT_SAL_LIST_NO
+		                   INNER JOIN HR_ISUC H
+		                           ON E.EMP_NO = H.EMP_NO
+		                   INNER JOIN DEPT D
+		                           ON H.DEPT_NO = D.DEPT_NO
+		                   INNER JOIN POSN P
+		                           ON H.POSN_NO = P.POSN_NO
+		                   INNER JOIN ANUL_SAL A
+		                           ON M.EMP_NO = A.EMP_NO 
+		                   INNER JOIN SAL_DETL_BRED S
+		                           ON M.MONT_SORT_SAL_LIST_NO = S.MONT_SORT_SAL_LIST_NO
+		        WHERE A.STAD_YEAR = TO_CHAR(SYSDATE, 'YYYY')
+		        AND SAL_CODE = 0
+                )M
+		WHERE M.MONT_SORT_SAL_LIST_NO = #{mont_sort_sal_list_no}
+	</select>
+	
+	<insert id="montUpdate" parameterType="hashmap">
+		INSERT INTO SAL_DETL_BRED(SAL_DETL_BRED_NO, MONT_SORT_SAL_LIST_NO, SAL_CODE, PRICE)
+		VALUES (SAL_DETL_BRED_SEQ.NEXTVAL, #{mont_sort_sal_list_no}, #{sal_code}, #{price})
+	</insert>
+	
+	<insert id="montTest()" parameterType="hashmap">
+		INSERT INTO MONT_SORT_SAL_LIST(MONT_SORT_SAL_LIST_NO, EMP_NO, ATBT_YEAR_MONT, STAD_YEAR)
+		SELECT MONT_SORT_SAL_LIST_SEQ.NEXTVAL, EMP_NO, ATBT_YEAR_MONT, SYSDATE
+		FROM MONT_SORT_SAL_LIST
+	</insert>
+	
+	<select id="date" resultType="String">
+		SELECT TO_CHAR(STAD_YEAR, 'YYYYMM')
+		FROM MONT_SORT_SAL_LIST
+		WHERE EMP_NO = 1
+	</select>
+	
+	<select id="sal" resultType="String">
+		SELECT TO_CHAR(SUM(M.PRICE-(M.PRICE1+M.PRICE2+M.PRICE3+M.PRICE4)), '999,999,999,999,999') AS REALSAL
+		FROM (SELECT PRICE, TRUNC(PRICE*0.045) AS PRICE1, TRUNC(PRICE*0.08) AS PRICE2, TRUNC(PRICE*0.03335) AS PRICE3, TRUNC(PRICE*0.0763/10) AS PRICE4
+			  FROM SAL_DETL_BRED A INNER JOIN MONT_SORT_SAL_LIST M
+					                       ON A.MONT_SORT_SAL_LIST_NO = M.MONT_SORT_SAL_LIST_NO) M
+	</select>
+	
+	<!-- 디테일 sal_code & price -->
+	<select id="getMontDetailCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM SAL_DETL_BRED
+		WHERE MONT_SORT_SAL_LIST_NO = #{mont_sort_sal_list_no}
+	</select>
+	
+	<select id="getCodeList" parameterType="hashmap" resultType="hashmap">
+		SELECT TO_CHAR(PRICE, '999,999,999,999,999') AS PRICE, DECODE(SAL_CODE, 0, '기본급', 1, '시간외근로수당', 2, '상여금', 3, '연차수당', 4, '직책수당', 5, '포상') AS SAL_CODE
+		FROM SAL_DETL_BRED
+		WHERE MONT_SORT_SAL_LIST_NO = #{mont_sort_sal_list_no}
+		ORDER BY SAL_CODE ASC
+	</select>
+</mapper>

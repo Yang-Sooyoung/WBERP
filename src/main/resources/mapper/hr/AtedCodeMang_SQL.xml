@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="atedcode">
+	<select id="getAtedCodeCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM ATED_CODE_MANG
+		WHERE 1 = 1
+		AND DEL_WHET = 0
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND ATED_CODE_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND ATED_CODE_EXPN LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getAtedCodeList" resultType="hashmap">
+		SELECT A.ATED_CODE_NO, A.ATED_CODE_NM, A.ATED_CODE_EXPN
+		FROM ( SELECT ATED_CODE_NO, ATED_CODE_NM, ATED_CODE_EXPN,
+              		  ROW_NUMBER() OVER(ORDER BY ATED_CODE_NO ASC) AS RNUM
+       		   FROM ATED_CODE_MANG
+       		   WHERE 1 = 1
+       		   AND DEL_WHET = 0
+			   <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND ATED_CODE_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND ATED_CODE_EXPN LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+			  ) A
+		WHERE A.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id = "getAtedCodeDetailCont" parameterType = "hashmap" resultType = "hashmap">
+		SELECT ATED_CODE_NO, ATED_CODE_NM, ATED_CODE_EXPN
+		FROM ATED_CODE_MANG
+		WHERE 1 = 1
+		AND DEL_WHET = 0
+		AND ATED_CODE_NO = #{ated_code_no}
+	</select>
+	<insert id="atedCodeAdd" parameterType="hashmap">
+		INSERT INTO ATED_CODE_MANG(ATED_CODE_NO, ATED_CODE_NM, ATED_CODE_EXPN)
+		VALUES(ATED_CODE_MANG_SEQ.NEXTVAL, #{ated_code_nm1}, #{ated_code_expn1})
+	</insert>
+	<update id="atedCodeUpdate" parameterType="hashmap">
+		UPDATE ATED_CODE_MANG SET ATED_CODE_NM = #{ated_code_nm2},
+								  ATED_CODE_EXPN = #{ated_code_expn2}
+		WHERE ATED_CODE_NO = #{ated_code_no}
+	</update>
+	<update id="atedCodeDelete" parameterType="hashmap">
+		UPDATE ATED_CODE_MANG SET DEL_WHET = 1
+		WHERE ATED_CODE_NO = #{ated_code_no}
+	</update>
+</mapper>

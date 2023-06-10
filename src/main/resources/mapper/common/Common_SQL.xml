@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="common">
+	<select id="loginCheck" parameterType="hashmap" resultType="hashmap">
+		SELECT E.EMP_NO, E.EMP_NM, E.PHOTO_ADDR, E.ATHR_NO, D.DEPT_NO, D.DEPT_NM, P.POSN_NM
+		FROM EMP E INNER JOIN HR_ISUC H
+		                   ON E.EMP_NO = H.EMP_NO
+		                  AND H.END_DATE IS NULL
+		                  AND H.STATE = 1
+		           INNER JOIN DEPT D
+		                   ON H.DEPT_NO = D.DEPT_NO
+		           INNER JOIN POSN P
+		                   ON H.POSN_NO = P.POSN_NO
+		WHERE E.EMAIL = #{id}
+		AND E.EMP_PW = #{pw}
+	</select>
+	
+	<select id="getTopMenu" parameterType="String" resultType="hashmap">
+		SELECT M.MENU_NO, M.MENU_NM, M.MENU_ADDR, M.MENU_APARAM
+		FROM MENU M INNER JOIN MENU_ATHR MA
+		                    ON M.MENU_NO = MA.MENU_NO
+		                   AND MA.ATHR_TYPE_NO IN (1, 2)
+		                   AND MA.ATHR_NO = #{athrNo}
+		WHERE M.MENU_DEPTH = 1
+		ORDER BY M.MENU_NO ASC
+	</select>
+	
+	<select id="getLeftMenu" parameterType="hashmap" resultType="hashmap">
+		SELECT M.MENU_NO, M.MENU_NM, M.HMENU_NO, M.MENU_ADDR, M.MENU_DEPTH, M.CNT, M.MENU_FLOW
+		FROM (
+		SELECT M.MENU_NO, M.MENU_NM, M.HMENU_NO, M.MENU_ADDR, M.MENU_DEPTH, NVL(TM.CNT, 0) AS CNT,
+		       SUBSTR(SYS_CONNECT_BY_PATH(M.MENU_NO, ','), 2) AS MENU_FLOW
+		FROM MENU M INNER JOIN MENU_ATHR MA
+		                    ON M.MENU_NO = MA.MENU_NO
+		                   AND MA.ATHR_TYPE_NO IN (1, 2)
+		                   AND MA.ATHR_NO = #{athrNo}
+		            LEFT OUTER JOIN (SELECT M.HMENU_NO, COUNT(*) AS CNT
+		                             FROM MENU M INNER JOIN MENU_ATHR MA
+		                                                 ON M.MENU_NO = MA.MENU_NO
+		                                                AND MA.ATHR_TYPE_NO IN (1, 2)
+		                                                AND MA.ATHR_NO = #{athrNo}
+		                             GROUP BY M.HMENU_NO) TM
+		                         ON M.MENU_NO = TM.HMENU_NO
+		WHERE 1 = 1
+		START WITH MENU_DEPTH = 1
+		CONNECT BY PRIOR M.MENU_NO = M.HMENU_NO) M
+		WHERE M.MENU_FLOW LIKE #{top} || '%'
+	</select>
+	
+	<select id="menuAthrCheck" parameterType="hashmap" resultType="String">
+		SELECT ATHR_TYPE_NO
+		FROM MENU_ATHR
+		WHERE ATHR_NO = #{athrNo}
+		AND MENU_NO = #{menuNo}
+	</select>
+	
+	<select id="getComnCode" parameterType="String" resultType="hashmap">
+		SELECT SMAL_FRAC, CODE_NM
+		FROM COMN_CODE
+		WHERE DEL_WHET = 0
+		AND BIG_FRAC = #{bigFrac}
+		ORDER BY ARAY_SEQ ASC
+	</select>
+</mapper>

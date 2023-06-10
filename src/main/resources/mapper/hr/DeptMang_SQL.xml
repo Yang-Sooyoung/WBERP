@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dept">
+	<select id="getDeptMangCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM DEPT
+		WHERE 1 = 1
+		AND DEPT_DEL = 0
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND DEPT_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND DEPT_EXPN LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getDeptMangList" resultType="hashmap">
+		SELECT D.DEPT_NO, D.DEPT_OVER_NO, D.DEPT_HEAD_NO, D.DEPT_NM, D.DEPT_EXPN
+		FROM ( SELECT DEPT_NO, DEPT_OVER_NO, DEPT_HEAD_NO, DEPT_NM, DEPT_EXPN,
+              		  ROW_NUMBER() OVER(ORDER BY DEPT_NO ASC) AS RNUM
+       		   FROM DEPT
+       		   WHERE 1 = 1
+       		   AND DEPT_DEL = 0
+			   <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND DEPT_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND DEPT_EXPN LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+			  ) D
+		WHERE D.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id = "getDeptMangDetailCont" parameterType = "hashmap" resultType = "hashmap">
+		SELECT DEPT_NO, DEPT_OVER_NO, DEPT_HEAD_NO, DEPT_NM, DEPT_EXPN
+		FROM DEPT
+		WHERE 1 = 1
+		AND DEPT_DEL = 0
+		AND DEPT_NO = #{dept_no}
+	</select>
+	<insert id="DeptMangAdd" parameterType="hashmap">
+		INSERT INTO DEPT(DEPT_NO, DEPT_OVER_NO, DEPT_HEAD_NO, DEPT_NM, DEPT_EXPN)
+		VALUES(DEPT_SEQ.NEXTVAL, #{dept_over_no}, #{dept_head_no},#{dept_nm}, #{dept_expn})
+	</insert>
+	<update id="DeptMangUpdate" parameterType="hashmap">
+		UPDATE DEPT SET DEPT_NO = #{dept_no},
+						DEPT_OVER_NO = #{dept_over_no},
+						DEPT_HEAD_NO = #{dept_head_no},
+						DEPT_NM = #{dept_nm},
+						DEPT_EXPN = #{dept_expn}
+		WHERE DEPT_NO = #{dept_no}
+	</update>
+	<update id="DeptMangDelete" parameterType="hashmap">
+		UPDATE DEPT SET DEPT_DEL = 1
+		WHERE DEPT_NO = #{dept_no}
+	</update>
+</mapper>

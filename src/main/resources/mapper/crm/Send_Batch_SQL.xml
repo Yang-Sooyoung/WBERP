@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="CampSendBatch">
+	<select id="kakaoSned" parameterType="hashmap" resultType="hashmap">
+		SELECT *
+		FROM KAKAO_SEND
+		WHERE SEND_DATE = #{time1} AND ETC2 = '4'
+	</select>
+	<update id="updateKakao" parameterType="hashmap">
+		UPDATE KAKAO_SEND SET RECT_WHET = #{rectVAL} ,
+								REAL_RECT_WHET = #{real_rectVAL},
+								SEND_DATE = SEND_DATE + 7
+		WHERE KAKAO_SEND_NO = #{tempNo}
+	</update>
+	<select id="EmailSend" parameterType="hashmap" resultType="hashmap">
+		SELECT *
+		FROM EMAIL_SEND
+		WHERE SEND_DATE = #{time1} AND ETC2 = '4'
+	</select>
+	<update id="updateEmail" parameterType="hashmap">
+		UPDATE EMAIL_SEND SET RECT_WHET = #{rectVAL} ,
+								REAL_RECT_WHET = #{real_rectVAL},
+								SEND_DATE = SEND_DATE + 7
+		WHERE EMAIL_SEND_NO = #{tempNo}
+	</update>
+	<select id="MsgSned" parameterType="hashmap" resultType="hashmap">
+		SELECT *
+		FROM MSG_SEND
+		WHERE SEND_DATE = #{time1} AND ETC2 = '4'
+	</select>
+	<update id="updateMsg" parameterType="hashmap">
+		UPDATE MSG_SEND SET RECT_WHET = #{rectVAL} ,
+								REAL_RECT_WHET = #{real_rectVAL}
+								,SEND_DATE = SEND_DATE + 7
+		WHERE MSG_SEND_NO = #{tempNo}
+	</update>
+	<select id="getCamp" parameterType="hashmap" resultType="hashmap">
+		SELECT CAMP_NO ,STAT_CODE , TO_CHAR(START_PERD,'YY-MM-DD') AS START_PERD , TO_CHAR(END_PERD,'YY-MM-DD') AS END_PERD
+		FROM CAMP
+	</select> 
+	<update id="updateStat" parameterType="hashmap">
+		UPDATE CAMP SET STAT_CODE = #{statno}
+		WHERE CAMP_NO = #{campno}
+	</update>
+	<select id="getCampAprv" parameterType="hashmap" resultType="hashmap">
+		SELECT CAMP_NO ,STAT_CODE , TO_CHAR(START_PERD,'YY-MM-DD') AS START_PERD
+		FROM CAMP
+		WHERE CAMP_NO = #{campno}
+	</select>
+	<select id="getCampCust" parameterType="hashmap" resultType="hashmap">
+		SELECT CUST_NO , CHAN_TYPE_NO
+		FROM CAMP_CUST
+		WHERE CAMP_NO = #{campno}
+	</select>
+	<select id="getCustPhone" parameterType="hashmap" resultType="hashmap">
+		SELECT CELL_NO
+		FROM OTSD_CUST
+		WHERE CUST_NO = #{custNo}
+	</select>
+ 	<insert id="addSendData" parameterType="hashmap">
+	INSERT INTO ${table1} (${sendno} , RECP_NO , TITLE , CONT , SEND_DATE , ETC1 , ETC2 , RECT_WHET , REAL_RECT_WHET)
+	VALUES( ${seqno} , #{phoneNo} , #{title} , #{cont} , #{perd} , #{campno} ,#{stat} , '0' , '0')
+	</insert>
+	<update id="finishSend" parameterType="hashmap">
+		UPDATE ${table1} SET ETC2 = '1'
+		WHERE ETC1 = #{campno}
+	</update>
+	
+</mapper> 
+
+
+
+
+
+
+

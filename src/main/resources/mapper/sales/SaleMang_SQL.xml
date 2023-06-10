@@ -1,0 +1,883 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="salemang">
+
+	<select id="getSaleMangListCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EMP E  INNER JOIN CUST_COMP CC
+                                    ON E.EMP_NO = CC.EMP_NO
+                            INNER JOIN INSD_CUST I
+                                    ON CC.ENTP_NO = I.ENTP_NO
+                            INNER JOIN SALE S
+                                    ON I.CUST_NO = S.CUST_NO
+        WHERE 1 = 1 
+        AND PROG_COND BETWEEN 0 AND 2
+        <if test="empNm != null and empNm != ''">
+				AND EMP_NM LIKE '%' || #{empNm} || '%'
+			</if>
+	        <if test="entpNm != null and entpNm != ''">
+				AND ENTP_NM LIKE '%' || #{entpNm} || '%'
+			</if>
+	        <if test="custNm != null and custNm != ''">
+				AND CUST_NM LIKE '%' || #{custNm} || '%'
+			</if>
+	        <if test="startDay != null and startDay != ''">
+				AND TO_CHAR(START_DAY, 'YYYY-MM-DD') = #{startDay}
+			</if>
+	        <if test="endDay != null and endDay != ''">
+				AND TO_CHAR(END_DAY, 'YYYY-MM-DD') = #{endDay}
+			</if>
+	        <if test="saleNm != null and saleNm != ''">
+				AND SALE_NM LIKE '%' || #{saleNm} || '%'
+			</if>
+	        <if test="searchGbn != null and searchGbn != '전체'">
+				AND PROG_COND LIKE #{searchGbn}
+			</if>
+	</select>
+	
+	<select id="getSaleMangList" parameterType="hashmap" resultType="hashmap">
+		SELECT SALE_NO, CUST_NO, CUST_NM, ENTP_NO, ENTP_NM, EMP_NO, EMP_NM, SALE_NM, START_DAY, END_DAY, PROG_COND, DETL_CONT, REMK, CODE_NM
+		FROM (	SELECT S.SALE_NO, I.CUST_NO, I.CUST_NM, CC.ENTP_NO, CC.ENTP_NM, E.EMP_NO, E.EMP_NM, S.SALE_NM,
+				       TO_CHAR(S.START_DAY, 'YYYY-MM-DD') AS START_DAY, 
+				       TO_CHAR(S.END_DAY, 'YYYY-MM-DD') AS END_DAY,
+				       S.PROG_COND, S.DETL_CONT, S.REMK, CD.CODE_NM,
+				       ROW_NUMBER() OVER(ORDER BY S.SALE_NO DESC) AS RNUM
+				FROM EMP E  INNER JOIN CUST_COMP CC
+                                    ON E.EMP_NO = CC.EMP_NO
+                            INNER JOIN INSD_CUST I
+                                    ON CC.ENTP_NO = I.ENTP_NO
+                            INNER JOIN SALE S
+                                    ON I.CUST_NO = S.CUST_NO
+                            INNER JOIN COMN_CODE CD
+                                    ON S.PROG_COND = CD.SMAL_FRAC
+                                    AND CD.BIG_FRAC = 8
+                WHERE 1 = 1 
+                AND PROG_COND BETWEEN 0 AND 2
+                <if test="empNm != null and empNm != ''">
+					AND EMP_NM LIKE '%' || #{empNm} || '%'
+				</if>
+		        <if test="entpNm != null and entpNm != ''">
+					AND ENTP_NM LIKE '%' || #{entpNm} || '%'
+				</if>
+		        <if test="custNm != null and custNm != ''">
+					AND CUST_NM LIKE '%' || #{custNm} || '%'
+				</if>
+		        <if test="startDay != null and startDay != ''">
+					AND TO_CHAR(START_DAY, 'YYYY-MM-DD') = #{startDay}
+				</if>
+		        <if test="endDay != null and endDay != ''">
+					AND TO_CHAR(END_DAY, 'YYYY-MM-DD') = #{endDay}
+				</if>
+		        <if test="saleNm != null and saleNm != ''">
+					AND SALE_NM LIKE '%' || #{saleNm} || '%'
+				</if>
+		        <if test="searchGbn != null and searchGbn != '전체'">
+					AND PROG_COND LIKE #{searchGbn}
+				</if>				
+				) A
+		 WHERE A.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleMangDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT DISTINCT S.SALE_NO, E.EMP_NM, I.CUST_NO, I.CUST_NM, CC.ENTP_NM, S.SALE_NM, TO_CHAR(S.START_DAY, 'YYYY-MM-DD') AS START_DAY, 
+			   TO_CHAR(S.END_DAY, 'YYYY-MM-DD') AS END_DAY, S.PROG_COND, S.DETL_CONT, S.REMK, CD.CODE_NM
+		FROM EMP E  INNER JOIN CUST_COMP CC
+                                    ON E.EMP_NO = CC.EMP_NO
+                            INNER JOIN INSD_CUST I
+                                    ON CC.ENTP_NO = I.ENTP_NO
+                            INNER JOIN SALE S
+                                    ON I.CUST_NO = S.CUST_NO
+                            INNER JOIN COMN_CODE CD
+                                    ON S.PROG_COND = CD.SMAL_FRAC
+                                    AND CD.BIG_FRAC = 8
+		WHERE S.SALE_NO = #{saleNo}
+	</select>
+	
+	<select id="getSaleMangDetail1" parameterType="hashmap" resultType="hashmap">
+		SELECT DISTINCT S.SALE_NO, E.EMP_NM, I.CUST_NM, CC.ENTP_NM, S.SALE_NM, TO_CHAR(S.START_DAY, 'YYYY-MM-DD') AS START_DAY, 
+			   TO_CHAR(S.END_DAY, 'YYYY-MM-DD') AS END_DAY, S.PROG_COND, S.DETL_CONT, S.REMK, CD.CODE_NM
+		FROM EMP E  INNER JOIN CUST_COMP CC
+                                    ON E.EMP_NO = CC.EMP_NO
+                            INNER JOIN INSD_CUST I
+                                    ON CC.ENTP_NO = I.ENTP_NO
+                            INNER JOIN SALE S
+                                    ON I.CUST_NO = S.CUST_NO
+                            INNER JOIN COMN_CODE CD
+                                    ON S.PROG_COND = CD.SMAL_FRAC
+                                    AND CD.BIG_FRAC = 8
+		WHERE S.SALE_NO = #{saleNo6}
+	</select>
+	
+	<select id="getSugsTabCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM SUGS
+		WHERE SALE_NO = #{saleNo}
+	</select>
+	
+	<select id="getNegtTabCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM SALE S INNER JOIN NEGT N 
+                            ON S.SALE_NO = N.SALE_NO
+                    INNER JOIN NEGT_GODS NG
+                            ON N.NEGT_NO = NG.NEGT_NO
+                    INNER JOIN GODS G
+                            ON NG.GODS_NO = G.GODS_NO
+                    INNER JOIN LOAN_KIND LK
+                            ON G.GODS_NO = LK.GODS_NO
+                    INNER JOIN GODS_MANG_CODE MC1
+		                    ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+		                   AND MC1.BIG_FRAC = 1
+                    INNER JOIN LOAN_PERD LP
+                            ON LK.GODS_NO = LP.GODS_NO
+                    INNER JOIN GODS_MANG_CODE MC2
+                            ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+                           AND MC2.BIG_FRAC = 2
+                    INNER JOIN COLT C
+                            ON G.GODS_NO = C.GODS_NO
+                    INNER JOIN GODS_MANG_CODE MC3
+                            ON C.COLT_NO = MC3.SMAL_FRAC 
+		                    AND MC3.BIG_FRAC = 3
+                    INNER JOIN SALE_ATCH_FILE SAF
+                            ON N.SALE_NO = SAF.SALE_NO
+		WHERE S.SALE_NO = #{saleNo}
+	</select>
+	
+	<select id="getCotrTabCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM SALE S INNER JOIN COTR C 
+                            ON S.SALE_NO = C.SALE_NO
+                    INNER JOIN COTR_GODS CG
+                            ON C.COTR_NO = CG.COTR_NO
+                    INNER JOIN GODS G
+                            ON CG.GODS_NO = G.GODS_NO
+                    INNER JOIN LOAN_KIND LK
+                            ON G.GODS_NO = LK.GODS_NO
+                    INNER JOIN GODS_MANG_CODE MC1
+		                    ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+		                   AND MC1.BIG_FRAC = 1
+                    INNER JOIN LOAN_PERD LP
+                            ON LK.GODS_NO = LP.GODS_NO
+                    INNER JOIN GODS_MANG_CODE MC2
+                            ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+                           AND MC2.BIG_FRAC = 2
+                    INNER JOIN COLT C
+                            ON G.GODS_NO = C.GODS_NO
+                    INNER JOIN GODS_MANG_CODE MC3
+                            ON C.COLT_NO = MC3.SMAL_FRAC 
+		                    AND MC3.BIG_FRAC = 3
+                    INNER JOIN SALE_ATCH_FILE SAF
+                            ON C.SALE_NO = SAF.SALE_NO
+		WHERE S.SALE_NO = #{saleNo}
+	</select>
+	
+	<select id="getSugsTabList" parameterType="hashmap" resultType="hashmap">
+		SELECT SUGS_NO, SALE_NO, TO_CHAR(A.SUGS_DAY, 'YYYY-MM-DD') AS SUGS_DAY, CUST_NEDS, GODS_NM, LOAN_KIND, LOAN_PERD
+		FROM ( SELECT S.SUGS_NO, S.SALE_NO, S.SUGS_DAY, S.CUST_NEDS, G.GODS_NM, MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD,
+		              ROW_NUMBER() OVER(ORDER BY S.SUGS_NO DESC) AS RNUM
+		        FROM SUGS S INNER JOIN SUGS_GODS SG
+		                            ON S.SUGS_NO = SG.SUGS_NO
+		                    INNER JOIN GODS G
+		                            ON SG.GODS_NO = G.GODS_NO
+		                    INNER JOIN LOAN_KIND LK
+		                            ON G.GODS_NO = LK.GODS_NO
+		                    INNER JOIN GODS_MANG_CODE MC1
+				                    ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+				                   AND MC1.BIG_FRAC = 1
+		                    INNER JOIN LOAN_PERD LP
+		                            ON LK.GODS_NO = LP.GODS_NO
+		                    INNER JOIN GODS_MANG_CODE MC2
+				                	ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+				                	AND MC2.BIG_FRAC = 2 ) A
+		WHERE SALE_NO = #{saleNo}
+	</select>
+	
+	<select id="getNegtTabList" parameterType="hashmap" resultType="hashmap">
+		SELECT NEGT_NO, SALE_NO, CUST_RECT, CUST_DEMN_MATR, ATCH_FILE_NM, SALE_ATCH_FILE_NO, PROG_COND, LOAN_KIND, LOAN_PERD, COLT, PRICE, GODS_NM
+		FROM ( SELECT N.NEGT_NO, N.SALE_NO, N.CUST_RECT, N.CUST_DEMN_MATR, SAF.ATCH_FILE_NM, SAF.SALE_ATCH_FILE_NO, SAF.PROG_COND, NG.PRICE,
+		              MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD, MC3.CODE_NM AS COLT, G.GODS_NM,
+		              ROW_NUMBER() OVER(ORDER BY N.NEGT_NO DESC) AS RNUM
+		        FROM SALE S INNER JOIN NEGT N 
+		                            ON S.SALE_NO = N.SALE_NO
+		                    INNER JOIN NEGT_GODS NG
+		                            ON N.NEGT_NO = NG.NEGT_NO
+		                    INNER JOIN GODS G
+		                            ON NG.GODS_NO = G.GODS_NO
+		                    INNER JOIN LOAN_KIND LK
+		                            ON G.GODS_NO = LK.GODS_NO
+		                    INNER JOIN GODS_MANG_CODE MC1
+				                    ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+				                   AND MC1.BIG_FRAC = 1
+		                    INNER JOIN LOAN_PERD LP
+		                            ON LK.GODS_NO = LP.GODS_NO
+		                    INNER JOIN GODS_MANG_CODE MC2
+		                            ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+		                           AND MC2.BIG_FRAC = 2
+		                    INNER JOIN COLT C
+		                            ON G.GODS_NO = C.GODS_NO
+		                    INNER JOIN GODS_MANG_CODE MC3
+		                            ON C.COLT_NO = MC3.SMAL_FRAC 
+				                    AND MC3.BIG_FRAC = 3
+		                    INNER JOIN SALE_ATCH_FILE SAF
+		                            ON N.SALE_NO = SAF.SALE_NO ) A 
+		WHERE SALE_NO = #{saleNo}
+		AND PROG_COND = 1
+	</select>
+	
+	<select id="getCotrTabList" parameterType="hashmap" resultType="hashmap">
+		SELECT SALE_ATCH_FILE_NO, COTR_NO, SALE_NO, TO_CHAR(A.COTR_DAY, 'YYYY-MM-DD') AS COTR_DAY, ATCH_FILE_NM, PROG_COND, LOAN_KIND, LOAN_PERD, COLT, PRICE, GODS_NM
+		FROM ( SELECT C.COTR_NO, C.SALE_NO, C.COTR_DAY, SAF.SALE_ATCH_FILE_NO, SAF.ATCH_FILE_NM, SAF.PROG_COND, CG.PRICE,
+		              MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD, MC3.CODE_NM AS COLT, G.GODS_NM,
+		              ROW_NUMBER() OVER(ORDER BY C.COTR_NO DESC) AS RNUM
+		        FROM SALE S INNER JOIN COTR C 
+		                            ON S.SALE_NO = C.SALE_NO
+		                    INNER JOIN COTR_GODS CG
+		                            ON C.COTR_NO = CG.COTR_NO
+		                    INNER JOIN GODS G
+		                            ON CG.GODS_NO = G.GODS_NO
+		                    INNER JOIN LOAN_KIND LK
+		                            ON G.GODS_NO = LK.GODS_NO
+		                    INNER JOIN GODS_MANG_CODE MC1
+				                    ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+				                   AND MC1.BIG_FRAC = 1
+		                    INNER JOIN LOAN_PERD LP
+		                            ON LK.GODS_NO = LP.GODS_NO
+		                    INNER JOIN GODS_MANG_CODE MC2
+		                            ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+		                           AND MC2.BIG_FRAC = 2
+		                    INNER JOIN COLT C
+		                            ON G.GODS_NO = C.GODS_NO
+		                    INNER JOIN GODS_MANG_CODE MC3
+		                            ON C.COLT_NO = MC3.SMAL_FRAC 
+				                    AND MC3.BIG_FRAC = 3
+		                    INNER JOIN SALE_ATCH_FILE SAF
+		                            ON C.SALE_NO = SAF.SALE_NO ) A
+		WHERE SALE_NO = #{saleNo}
+		AND PROG_COND = 2
+	</select>
+	
+	<select id="getSugsNo" resultType="String">
+		SELECT SUGS_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<insert id="sugsAdd1" parameterType="hashmap">
+		INSERT INTO SUGS (SUGS_NO, SALE_NO, SUGS_DAY, CUST_NEDS)
+		VALUES (#{sugsNo}, #{saleNo1}, #{sugsDay}, #{custNeds})
+	</insert>
+	
+	<insert id="sugsAdd2" parameterType="hashmap">
+		INSERT INTO SUGS_GODS (SUGS_NO, GODS_NO, LOAN_KIND_NO, LOAN_PERD_NO)
+		VALUES (#{sugsNo}, #{godsNo1}, #{loanKind1}, #{loanPerd1})
+	</insert>
+	
+	<select id="getNegtNo" resultType="String">
+		SELECT NEGT_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<insert id="negtAdd1" parameterType="hashmap">
+		INSERT INTO NEGT (NEGT_NO, SALE_NO, CUST_RECT, CUST_DEMN_MATR)
+	    VALUES (#{negtNo}, #{saleNo2}, #{custRect}, #{custDemnMatr})
+	</insert>
+	
+	<insert id="negtAdd2" parameterType="hashmap">
+		INSERT INTO SALE_ATCH_FILE(SALE_ATCH_FILE_NO ,SALE_NO, ATCH_FILE_NM, PROG_COND)
+	    VALUES (SALE_ATCH_FILE_SEQ.NEXTVAL, #{saleNo2}, #{negtFile}, 1)
+	</insert>
+	
+	<insert id="negtAdd3" parameterType="hashmap">
+		INSERT INTO NEGT_GODS (NEGT_NO, GODS_NO, LOAN_KIND_NO, LOAN_PERD_NO, COLT_NO, PRICE)
+		VALUES (#{negtNo}, #{godsNo2}, #{loanKind2}, #{loanPerd2}, #{colt1}, #{price1})
+	</insert>
+	
+	<select id="getCotrNo" resultType="String">
+		SELECT COTR_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<insert id="cotrAdd1" parameterType="hashmap">
+		INSERT INTO COTR (COTR_NO, SALE_NO, COTR_DAY)
+		VALUES (#{cotrNo}, #{saleNo3}, #{cotrDay})
+	</insert>
+	
+	<insert id="cotrAdd2" parameterType="hashmap">
+		INSERT INTO SALE_ATCH_FILE(SALE_ATCH_FILE_NO ,SALE_NO, ATCH_FILE_NM, PROG_COND)
+	    VALUES (SALE_ATCH_FILE_SEQ.NEXTVAL, #{saleNo3}, #{cotrFile}, 2)
+	</insert>
+	
+	<insert id="cotrAdd3" parameterType="hashmap">
+		INSERT INTO COTR_GODS (COTR_NO, GODS_NO, LOAN_KIND_NO, LOAN_PERD_NO, COLT_NO, PRICE)
+		VALUES (#{cotrNo}, #{godsNo3}, #{loanKind3}, #{loanPerd3}, #{colt2}, #{price2})
+	</insert>
+	
+	<update id="sugsUpdate1" parameterType="hashmap">
+		UPDATE SUGS
+		SET SUGS_DAY = #{sugsDay6}, CUST_NEDS = #{custNeds6}
+		WHERE SALE_NO = #{saleNo6}
+	</update>
+	
+	<update id="sugsUpdate2" parameterType="hashmap">
+		UPDATE SUGS_GODS
+		SET GODS_NO = #{godsNo6}, LOAN_KIND_NO = #{loanKind6}, LOAN_PERD_NO = #{loanPerd6}
+		WHERE SUGS_NO = #{sugsNo6}
+	</update>
+	
+	<update id="negtUpdate1" parameterType="hashmap">
+		UPDATE NEGT
+		SET CUST_RECT = #{custRect7}, CUST_DEMN_MATR = #{custDemnMatr7}
+		WHERE SALE_NO = #{saleNo7}
+	</update>
+	
+	<update id="negtUpdate2" parameterType="hashmap">
+		UPDATE SALE_ATCH_FILE
+		SET ATCH_FILE_NM = #{negtFile7}
+		WHERE SALE_NO = #{saleNo7}
+	</update>
+	
+	<update id="negtUpdate3" parameterType="hashmap">
+		UPDATE NEGT_GODS
+		SET GODS_NO = #{godsNo7}, LOAN_KIND_NO = #{loanKind7}, LOAN_PERD_NO = #{loanPerd7}, 
+			COLT_NO = #{colt7}, PRICE = #{price7}
+		WHERE NEGT_NO = #{negtNo7}
+	</update>
+	
+	<update id="cotrUpdate1" parameterType="hashmap">
+		UPDATE COTR
+		SET COTR_DAY = #{cotrDay8}
+		WHERE SALE_NO = #{saleNo8}
+	</update>
+	
+	<update id="cotrUpdate2" parameterType="hashmap">
+		UPDATE SALE_ATCH_FILE
+		SET ATCH_FILE_NM = #{cotrFile8}
+		WHERE SALE_NO = #{saleNo8}
+	</update>
+		
+	<update id="cotrUpdate3" parameterType="hashmap">
+		UPDATE COTR_GODS
+		SET GODS_NO = #{godsNo8}, LOAN_KIND_NO = #{loanKind8}, LOAN_PERD_NO = #{loanPerd8}, 
+			COLT_NO = #{colt8}, PRICE = #{price8}
+		WHERE COTR_NO = #{cotrNo8}
+	</update>
+	
+	<select id="getSugsCommentCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM SALE_OPNN
+		WHERE SALE_NO = #{saleNo}
+		AND DEL_WHET = 0
+        AND PROG_COND = 0
+	</select>
+	
+	<select id="getNegtCommentCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM SALE_OPNN
+		WHERE SALE_NO = #{saleNo}
+		AND DEL_WHET = 0
+        AND PROG_COND = 1
+	</select>
+	
+	<select id="getCotrCommentCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM SALE_OPNN
+		WHERE SALE_NO = #{saleNo}
+		AND DEL_WHET = 0
+        AND PROG_COND = 2
+	</select>
+	
+	<select id="getSugsCommentList" parameterType="hashmap" resultType="hashmap">
+		SELECT SALE_OPNN_NO, EMP_NO, EMP_NM, SALE_NO, PROG_COND, OPNN_CONT, WRITE_DAY, DEL_WHET
+		FROM (SELECT SO.SALE_OPNN_NO, E.EMP_NO, E.EMP_NM, S.SALE_NO, SO.PROG_COND, SO.OPNN_CONT, SO.WRITE_DAY, SO.DEL_WHET,
+		             ROW_NUMBER() OVER(ORDER BY SO.SALE_OPNN_NO DESC) AS RNUM
+		        FROM SALE_OPNN SO INNER JOIN SALE S
+		                                  ON SO.SALE_NO = S.SALE_NO
+		                          INNER JOIN EMP E
+		                                  ON S.EMP_NO = E.EMP_NO
+		        WHERE SO.DEL_WHET = 0
+		        AND SO.PROG_COND = 0) A
+		WHERE SALE_NO = #{saleNo}
+		AND A.RNUM BETWEEN #{sugsStartCnt} AND #{sugsEndCnt}
+	</select>
+	
+	<select id="getNegtCommentList" parameterType="hashmap" resultType="hashmap">
+		SELECT SALE_OPNN_NO, EMP_NO, EMP_NM, SALE_NO, PROG_COND, OPNN_CONT, WRITE_DAY, DEL_WHET
+		FROM (SELECT SO.SALE_OPNN_NO, E.EMP_NO, E.EMP_NM, S.SALE_NO, SO.PROG_COND, SO.OPNN_CONT, SO.WRITE_DAY, SO.DEL_WHET,
+		             ROW_NUMBER() OVER(ORDER BY SO.SALE_OPNN_NO DESC) AS RNUM
+		        FROM SALE_OPNN SO INNER JOIN SALE S
+		                                  ON SO.SALE_NO = S.SALE_NO
+		                          INNER JOIN EMP E
+		                                  ON S.EMP_NO = E.EMP_NO
+		        WHERE SO.DEL_WHET = 0
+		        AND SO.PROG_COND = 1) A
+		WHERE SALE_NO = #{saleNo}
+		AND A.RNUM BETWEEN #{negtStartCnt} AND #{negtEndCnt}
+	</select>
+	
+	<select id="getCotrCommentList" parameterType="hashmap" resultType="hashmap">
+		SELECT SALE_OPNN_NO, EMP_NO, EMP_NM, SALE_NO, PROG_COND, OPNN_CONT, WRITE_DAY, DEL_WHET
+		FROM (SELECT SO.SALE_OPNN_NO, E.EMP_NO, E.EMP_NM, S.SALE_NO, SO.PROG_COND, SO.OPNN_CONT, SO.WRITE_DAY, SO.DEL_WHET,
+		             ROW_NUMBER() OVER(ORDER BY SO.SALE_OPNN_NO DESC) AS RNUM
+		        FROM SALE_OPNN SO INNER JOIN SALE S
+		                                  ON SO.SALE_NO = S.SALE_NO
+		                          INNER JOIN EMP E
+		                                  ON S.EMP_NO = E.EMP_NO
+		        WHERE SO.DEL_WHET = 0
+		        AND SO.PROG_COND = 2) A
+		WHERE SALE_NO = #{saleNo}
+		AND A.RNUM BETWEEN #{cotrStartCnt} AND #{cotrEndCnt}
+	</select>
+	
+	<insert id="commentAdd1" parameterType="hashmap">
+		INSERT INTO SALE_OPNN (SALE_OPNN_NO, EMP_NO, SALE_NO, PROG_COND, OPNN_CONT)
+		VALUES (SALE_OPNN_SEQ.NEXTVAL, #{empNo}, #{saleNo}, #{commentProgCondNo}, #{opnnCont1})
+	</insert>
+	
+	<insert id="commentAdd2" parameterType="hashmap">
+		INSERT INTO SALE_OPNN (SALE_OPNN_NO, EMP_NO, SALE_NO, PROG_COND, OPNN_CONT)
+		VALUES (SALE_OPNN_SEQ.NEXTVAL, #{empNo}, #{saleNo}, #{commentProgCondNo}, #{opnnCont2})
+	</insert>
+	
+	<insert id="commentAdd3" parameterType="hashmap">
+		INSERT INTO SALE_OPNN (SALE_OPNN_NO, EMP_NO, SALE_NO, PROG_COND, OPNN_CONT)
+		VALUES (SALE_OPNN_SEQ.NEXTVAL, #{empNo}, #{saleNo}, #{commentProgCondNo}, #{opnnCont3})
+	</insert>
+	
+	<update id="commentUpdate1" parameterType="hashmap">
+		UPDATE SALE_OPNN SET OPNN_CONT = #{opnnCont1}
+		WHERE SALE_OPNN_NO = #{saleOpnnNo}
+		AND EMP_NO = #{empNo}
+	</update>
+	
+	<update id="commentUpdate2" parameterType="hashmap">
+		UPDATE SALE_OPNN SET OPNN_CONT = #{opnnCont2}
+		WHERE SALE_OPNN_NO = #{saleOpnnNo}
+		AND EMP_NO = #{empNo}
+	</update>
+	
+	<update id="commentUpdate3" parameterType="hashmap">
+		UPDATE SALE_OPNN SET OPNN_CONT = #{opnnCont3}
+		WHERE SALE_OPNN_NO = #{saleOpnnNo}
+		AND EMP_NO = #{empNo}
+	</update>
+	
+	<update id="commentDelete" parameterType="hashmap">
+		UPDATE SALE_OPNN SET DEL_WHET = 1
+		WHERE SALE_OPNN_NO = #{saleOpnnNo}
+		AND EMP_NO = #{empNo}
+	</update>
+		
+	<insert id="saleMangAdd" parameterType="hashmap" >
+		INSERT INTO SALE (SALE_NO, CUST_NO, EMP_NO, SALE_NM, START_DAY, END_DAY, PROG_COND, DETL_CONT, REMK)
+		VALUES (SALE_SEQ.NEXTVAL, #{custNo}, #{empNo}, #{saleNm}, #{startDay}, #{endDay}, #{progCond}, #{deltCont}, #{remk})
+	</insert>
+		
+	<select id="getSaleMangAddSearchCustCompCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CUST_COMP
+		WHERE 1 = 1
+		<if test="searchTxt1Hidden != null and searchTxt1Hidden != ''">
+				<choose>
+					<when test="searchGbn1Hidden == 0">
+						AND ENTP_NM LIKE '%' || #{searchTxt1Hidden} || '%'
+					</when>
+					<when test="searchGbn1Hidden == 1">
+						AND DELG_NM LIKE '%' || #{searchTxt1Hidden} || '%'
+					</when>		
+				</choose>
+		</if>
+	</select>
+		
+	<select id="getSaleMangAddSearchCustComp" parameterType="hashmap" resultType="hashmap">
+		SELECT M.ENTP_NO, M.ENTP_NM, M.DELG_NM
+		FROM (SELECT ENTP_NO, ENTP_NM, DELG_NM, ROW_NUMBER() OVER(ORDER BY ENTP_NO DESC) AS RNUM
+				FROM CUST_COMP
+				WHERE 1 = 1
+				<if test="searchTxt1Hidden != null and searchTxt1Hidden != ''">
+					<choose>
+						<when test="searchGbn1Hidden == 0">
+							AND ENTP_NM LIKE '%' || #{searchTxt1Hidden} || '%'
+						</when>
+						<when test="searchGbn1Hidden == 1">
+							AND DELG_NM LIKE '%' || #{searchTxt1Hidden} || '%'
+						</when>		
+					</choose>
+				</if>
+				)M
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+		
+	<select id="getSaleMangAddSearchInsdCustCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM INSD_CUST IC INNER JOIN CUST_COMP CC
+                                  ON IC.ENTP_NO = CC.ENTP_NO
+		WHERE 1 = 1
+		<if test="searchTxt2Hidden != null and searchTxt2Hidden != ''">
+			<choose>
+				<when test="searchGbn2Hidden == 0">
+					AND CUST_NM LIKE '%' || #{searchTxt2Hidden} || '%'
+				</when>
+				<when test="searchGbn2Hidden == 1">
+					AND ENTP_NM LIKE '%' || #{searchTxt2Hidden} || '%'
+				</when>		
+			</choose>
+		</if>
+	</select>
+		
+	<select id="getSaleMangAddSearchInsdCust" parameterType="hashmap" resultType="hashmap">
+		SELECT M.CUST_NO, M.CUST_NM, M.CUST_CELL, M.ENTP_NM
+		FROM(SELECT IC.CUST_NO, IC.CUST_NM, IC.CUST_CELL, CC.ENTP_NM, ROW_NUMBER() OVER(ORDER BY CUST_NO DESC) AS RNUM
+			 FROM INSD_CUST IC INNER JOIN CUST_COMP CC
+		   	                           ON IC.ENTP_NO = CC.ENTP_NO
+		     WHERE 1 = 1
+				<if test="searchTxt2Hidden != null and searchTxt2Hidden != ''">
+					<choose>
+						<when test="searchGbn2Hidden == 0">
+							AND CUST_NM LIKE '%' || #{searchTxt2Hidden} || '%'
+						</when>
+						<when test="searchGbn2Hidden == 1">
+							AND ENTP_NM LIKE '%' || #{searchTxt2Hidden} || '%'
+						</when>		
+					</choose>
+				</if>
+				)M
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleMangAddSearchGodsCnt1" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM GODS G INNER JOIN LOAN_KIND LK 
+	                        ON G.GODS_NO = LK.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC1
+	                        ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                       AND MC1.BIG_FRAC = 1
+	                INNER JOIN LOAN_PERD LP 
+	                        ON G.GODS_NO = LP.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC2
+	                        ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                       AND MC2.BIG_FRAC = 2
+	    WHERE 1 = 1
+          AND G.DEL_WHET = 0
+		<if test="searchTxt3Hidden != null and searchTxt3Hidden != ''">
+			<choose>
+				<when test="searchGbn3Hidden == 0">
+					AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>
+				<when test="searchGbn3Hidden == 1">
+					AND MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>		
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getSaleMangAddSearchGods1" parameterType="hashmap" resultType="hashmap">
+		SELECT M.GODS_NO, M.GODS_NM, M.LOAN_KIND, M.LOAN_PERS, M.LOAN_PERD, M.LOAN_LIMT
+	    FROM (SELECT G.GODS_NM, G.LOAN_LIMT, G.LOAN_PERS, ROW_NUMBER() OVER(ORDER BY G.GODS_NO DESC) AS RNUM,
+	          G.GODS_NO, G.DEL_WHET, MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD
+	          FROM GODS G INNER JOIN LOAN_KIND LK 
+	                              ON G.GODS_NO = LK.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC1
+	                              ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                             AND MC1.BIG_FRAC = 1
+	                      INNER JOIN LOAN_PERD LP 
+	                              ON G.GODS_NO = LP.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC2
+	                              ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                             AND MC2.BIG_FRAC = 2
+	          WHERE 1 = 1
+              AND G.DEL_WHET = 0
+				<if test="searchTxt3Hidden != null and searchTxt3Hidden != ''">
+					<choose>
+						<when test="searchGbn3Hidden == 0">
+							AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>
+						<when test="searchGbn3Hidden == 1">
+							AND  MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>		
+					</choose>
+				</if> )M        
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleMangAddSearchGodsCnt2" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM GODS G INNER JOIN LOAN_KIND LK 
+	                        ON G.GODS_NO = LK.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC1
+	                        ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                       AND MC1.BIG_FRAC = 1
+	                INNER JOIN LOAN_PERD LP 
+	                        ON G.GODS_NO = LP.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC2
+	                        ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                       AND MC2.BIG_FRAC = 2
+	    WHERE 1 = 1
+          AND G.DEL_WHET = 0
+		<if test="searchTxt4Hidden != null and searchTxt4Hidden != ''">
+			<choose>
+				<when test="searchGbn4Hidden == 0">
+					AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>
+				<when test="searchGbn4Hidden == 1">
+					AND MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>		
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getSaleMangAddSearchGods2" parameterType="hashmap" resultType="hashmap">
+		SELECT M.GODS_NO, M.GODS_NM, M.LOAN_KIND, M.LOAN_PERS, M.LOAN_PERD, M.LOAN_LIMT
+	    FROM (SELECT G.GODS_NM, G.LOAN_LIMT, G.LOAN_PERS, ROW_NUMBER() OVER(ORDER BY G.GODS_NO DESC) AS RNUM,
+	          G.GODS_NO, G.DEL_WHET, MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD
+	          FROM GODS G INNER JOIN LOAN_KIND LK 
+	                              ON G.GODS_NO = LK.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC1
+	                              ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                             AND MC1.BIG_FRAC = 1
+	                      INNER JOIN LOAN_PERD LP 
+	                              ON G.GODS_NO = LP.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC2
+	                              ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                             AND MC2.BIG_FRAC = 2
+	          WHERE 1 = 1
+              AND G.DEL_WHET = 0
+				<if test="searchTxt4Hidden != null and searchTxt4Hidden != ''">
+					<choose>
+						<when test="searchGbn4Hidden == 0">
+							AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>
+						<when test="searchGbn4Hidden == 1">
+							AND  MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>		
+					</choose>
+				</if> )M        
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleMangAddSearchGodsCnt3" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM GODS G INNER JOIN LOAN_KIND LK 
+	                        ON G.GODS_NO = LK.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC1
+	                        ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                       AND MC1.BIG_FRAC = 1
+	                INNER JOIN LOAN_PERD LP 
+	                        ON G.GODS_NO = LP.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC2
+	                        ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                       AND MC2.BIG_FRAC = 2
+	    WHERE 1 = 1
+          AND G.DEL_WHET = 0
+		<if test="searchTxt5Hidden != null and searchTxt5Hidden != ''">
+			<choose>
+				<when test="searchGbn5Hidden == 0">
+					AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>
+				<when test="searchGbn5Hidden == 1">
+					AND MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>		
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getSaleMangAddSearchGods3" parameterType="hashmap" resultType="hashmap">
+		SELECT M.GODS_NO, M.GODS_NM, M.LOAN_KIND, M.LOAN_PERS, M.LOAN_PERD, M.LOAN_LIMT
+	    FROM (SELECT G.GODS_NM, G.LOAN_LIMT, G.LOAN_PERS, ROW_NUMBER() OVER(ORDER BY G.GODS_NO DESC) AS RNUM,
+	          G.GODS_NO, G.DEL_WHET, MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD
+	          FROM GODS G INNER JOIN LOAN_KIND LK 
+	                              ON G.GODS_NO = LK.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC1
+	                              ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                             AND MC1.BIG_FRAC = 1
+	                      INNER JOIN LOAN_PERD LP 
+	                              ON G.GODS_NO = LP.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC2
+	                              ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                             AND MC2.BIG_FRAC = 2
+	          WHERE 1 = 1
+              AND G.DEL_WHET = 0
+				<if test="searchTxt5Hidden != null and searchTxt5Hidden != ''">
+					<choose>
+						<when test="searchGbn5Hidden == 0">
+							AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>
+						<when test="searchGbn5Hidden == 1">
+							AND  MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>		
+					</choose>
+				</if> )M        
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleMangAddSearchGodsCnt6" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM GODS G INNER JOIN LOAN_KIND LK 
+	                        ON G.GODS_NO = LK.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC1
+	                        ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                       AND MC1.BIG_FRAC = 1
+	                INNER JOIN LOAN_PERD LP 
+	                        ON G.GODS_NO = LP.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC2
+	                        ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                       AND MC2.BIG_FRAC = 2
+	    WHERE 1 = 1
+          AND G.DEL_WHET = 0
+		<if test="searchTxt6Hidden != null and searchTxt6Hidden != ''">
+			<choose>
+				<when test="searchGbn6Hidden == 0">
+					AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>
+				<when test="searchGbn6Hidden == 1">
+					AND MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>		
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getSaleMangAddSearchGods6" parameterType="hashmap" resultType="hashmap">
+		SELECT M.GODS_NO, M.GODS_NM, M.LOAN_KIND, M.LOAN_PERS, M.LOAN_PERD, M.LOAN_LIMT
+	    FROM (SELECT G.GODS_NM, G.LOAN_LIMT, G.LOAN_PERS, ROW_NUMBER() OVER(ORDER BY G.GODS_NO DESC) AS RNUM,
+	          G.GODS_NO, G.DEL_WHET, MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD
+	          FROM GODS G INNER JOIN LOAN_KIND LK 
+	                              ON G.GODS_NO = LK.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC1
+	                              ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                             AND MC1.BIG_FRAC = 1
+	                      INNER JOIN LOAN_PERD LP 
+	                              ON G.GODS_NO = LP.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC2
+	                              ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                             AND MC2.BIG_FRAC = 2
+	          WHERE 1 = 1
+              AND G.DEL_WHET = 0
+				<if test="searchTxt6Hidden != null and searchTxt6Hidden != ''">
+					<choose>
+						<when test="searchGbn6Hidden == 0">
+							AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>
+						<when test="searchGbn6Hidden == 1">
+							AND  MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>		
+					</choose>
+				</if> )M        
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleMangAddSearchGodsCnt7" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM GODS G INNER JOIN LOAN_KIND LK 
+	                        ON G.GODS_NO = LK.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC1
+	                        ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                       AND MC1.BIG_FRAC = 1
+	                INNER JOIN LOAN_PERD LP 
+	                        ON G.GODS_NO = LP.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC2
+	                        ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                       AND MC2.BIG_FRAC = 2
+	    WHERE 1 = 1
+          AND G.DEL_WHET = 0
+		<if test="searchTxt7Hidden != null and searchTxt7Hidden != ''">
+			<choose>
+				<when test="searchGbn7Hidden == 0">
+					AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>
+				<when test="searchGbn7Hidden == 1">
+					AND MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>		
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getSaleMangAddSearchGods7" parameterType="hashmap" resultType="hashmap">
+		SELECT M.GODS_NO, M.GODS_NM, M.LOAN_KIND, M.LOAN_PERS, M.LOAN_PERD, M.LOAN_LIMT
+	    FROM (SELECT G.GODS_NM, G.LOAN_LIMT, G.LOAN_PERS, ROW_NUMBER() OVER(ORDER BY G.GODS_NO DESC) AS RNUM,
+	          G.GODS_NO, G.DEL_WHET, MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD
+	          FROM GODS G INNER JOIN LOAN_KIND LK 
+	                              ON G.GODS_NO = LK.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC1
+	                              ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                             AND MC1.BIG_FRAC = 1
+	                      INNER JOIN LOAN_PERD LP 
+	                              ON G.GODS_NO = LP.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC2
+	                              ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                             AND MC2.BIG_FRAC = 2
+	          WHERE 1 = 1
+              AND G.DEL_WHET = 0
+				<if test="searchTxt7Hidden != null and searchTxt7Hidden != ''">
+					<choose>
+						<when test="searchGbn7Hidden == 0">
+							AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>
+						<when test="searchGbn7Hidden == 1">
+							AND  MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>		
+					</choose>
+				</if> )M        
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleMangAddSearchGodsCnt8" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM GODS G INNER JOIN LOAN_KIND LK 
+	                        ON G.GODS_NO = LK.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC1
+	                        ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                       AND MC1.BIG_FRAC = 1
+	                INNER JOIN LOAN_PERD LP 
+	                        ON G.GODS_NO = LP.GODS_NO
+	                INNER JOIN GODS_MANG_CODE MC2
+	                        ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                       AND MC2.BIG_FRAC = 2
+	    WHERE 1 = 1
+          AND G.DEL_WHET = 0
+		<if test="searchTxt8Hidden != null and searchTxt8Hidden != ''">
+			<choose>
+				<when test="searchGbn8Hidden == 0">
+					AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>
+				<when test="searchGbn8Hidden == 1">
+					AND MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+				</when>		
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getSaleMangAddSearchGods8" parameterType="hashmap" resultType="hashmap">
+		SELECT M.GODS_NO, M.GODS_NM, M.LOAN_KIND, M.LOAN_PERS, M.LOAN_PERD, M.LOAN_LIMT
+	    FROM (SELECT G.GODS_NM, G.LOAN_LIMT, G.LOAN_PERS, ROW_NUMBER() OVER(ORDER BY G.GODS_NO DESC) AS RNUM,
+	          G.GODS_NO, G.DEL_WHET, MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD
+	          FROM GODS G INNER JOIN LOAN_KIND LK 
+	                              ON G.GODS_NO = LK.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC1
+	                              ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                             AND MC1.BIG_FRAC = 1
+	                      INNER JOIN LOAN_PERD LP 
+	                              ON G.GODS_NO = LP.GODS_NO
+	                      INNER JOIN GODS_MANG_CODE MC2
+	                              ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                             AND MC2.BIG_FRAC = 2
+	          WHERE 1 = 1
+              AND G.DEL_WHET = 0
+				<if test="searchTxt8Hidden != null and searchTxt8Hidden != ''">
+					<choose>
+						<when test="searchGbn8Hidden == 0">
+							AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>
+						<when test="searchGbn8Hidden == 1">
+							AND  MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>		
+					</choose>
+				</if> )M        
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<update id="saleMangUpdate" parameterType="hashmap">
+		UPDATE SALE
+		SET SALE_NM = #{saleNm}, CUST_NO = #{custNo}, START_DAY = #{startDay}, END_DAY = #{endDay}, 
+			PROG_COND = #{progCond}, DETL_CONT = #{deltCont}, REMK = #{remk}
+		WHERE SALE_NO = #{saleNo}
+	</update>
+
+</mapper>
+

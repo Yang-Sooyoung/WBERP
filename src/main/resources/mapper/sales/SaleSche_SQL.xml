@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="salesche">
+	<select id="getSaleScheMang" parameterType="hashmap" resultType="hashmap">
+		SELECT M.SALE_SCHE_NO,M.ENTP_NO, M.ENTP_NM, M.DELG_NM, M.DELG_TEL, M.BUSN_NO, M.ENTP_ADDR,M.CUST_NM,M.CUST_NO, M.CUST_CELL, M.CUST_EMAIL,
+		       M.EMP_NM, M.EMP_NO,M.DEPT_NO, M.DEPT_NM, M.SCHE_START_DAY_TIME, M.SCHE_END_DAY_TIME, M.SCHE_LOCT, M.SCHE_START_DAY, M.SCHE_NO,
+		       M.SALE_SCHE_ATCH_FILE_NO
+		FROM(	SELECT S1.SALE_SCHE_NO,V2.ENTP_NO, V2.ENTP_NM, V2.DELG_NM, V2.DELG_TEL, V2.BUSN_NO, V2.ENTP_ADDR, I.CUST_NM,I.CUST_NO, I.CUST_CELL,
+		        	   I.CUST_EMAIL, V1.EMP_NM,V1.DEPT_NO, V1.DEPT_NM, V1.EMP_NO,TO_CHAR(V1.SCHE_START_DAY, 'HH24:MI') AS SCHE_START_DAY_TIME,
+		       	       V1.SCHE_NO,SF.SALE_SCHE_ATCH_FILE_NO, TO_CHAR(V1.SCHE_END_DAY, 'HH24:MI') AS SCHE_END_DAY_TIME,
+		        	   V1.SCHE_LOCT, ROW_NUMBER() OVER(ORDER BY V1.SCHE_START_DAY) AS RNUM, V1.SCHE_START_DAY
+				FROM SALE_SCHE S1 INNER JOIN INSD_CUST I
+				                          ON S1.CUST_NO = I.CUST_NO
+				                  INNER JOIN (SELECT S.EMP_NO, V.EMP_NM, S.SCHE_START_DAY, S.SCHE_END_DAY, S.SCHE_LOCT, S.SCHE_NO, V.DEPT_NO, V.DEPT_NM
+				                              FROM SCHE_ADD S INNER JOIN (SELECT E.EMP_NO, E.EMP_NM, E1.DEPT_NO, E1.DEPT_NM, E.EMAIL, E.CELL_NO
+                                                                         FROM EMP E INNER JOIN ( SELECT H.DEPT_NO, D.DEPT_NM, H.EMP_NO
+                                                                                                   FROM DEPT D INNER JOIN HR_ISUC H
+                                                                                                                       ON D.DEPT_NO = H.DEPT_NO) E1
+                                                                                             ON E.EMP_NO = E1.EMP_NO)V
+				                                                      ON S.EMP_NO = V.EMP_NO)V1
+				                          ON S1.SCHE_NO = V1.SCHE_NO
+				                  INNER JOIN (SELECT I.CUST_NO, C.ENTP_NO, C.ENTP_NM, C.DELG_NM,  C.BUSN_NO, C.ENTP_ADDR,C.DELG_TEL,I.CUST_NM,
+				                  					 I.CUST_CELL, I.CUST_EMAIL
+				                              FROM INSD_CUST I INNER JOIN CUST_COMP C
+				                                                       ON I.ENTP_NO = C.ENTP_NO) V2
+				                          ON S1.CUST_NO = V2.CUST_NO
+				                  LEFT OUTER JOIN SALE_SCHE_ATCH_FILE SF
+		                                   ON S1.SALE_SCHE_NO = SF.SALE_SCHE_NO
+				WHERE 1 = 1
+		        AND S1.DEL_WHET = 0
+
+				
+				AND TO_CHAR(V1.SCHE_START_DAY,'YYYY-MM-DD')=#{sysdate}
+				
+		        <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn == 0">
+							AND V2.ENTP_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn == 1">
+							AND V1.EMP_NM LIKE '%' || #{searchTxt} || '%'
+						</when>		
+					</choose>
+				</if>
+		        )M
+		        WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+		        ORDER BY M.SCHE_START_DAY_TIME
+			
+	</select>
+	
+	<select id="getSaleScheMangCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM SALE_SCHE SS INNER JOIN (SELECT SA.SCHE_NO, E.EMP_NM, SA.SCHE_START_DAY
+		                              FROM SCHE_ADD SA INNER JOIN EMP E
+		                                                       ON SA.EMP_NO = E.EMP_NO)V
+		                          ON SS.SCHE_NO = V.SCHE_NO
+		                  INNER JOIN ( SELECT IC.CUST_NO, CC.ENTP_NM
+		                               FROM INSD_CUST IC INNER JOIN CUST_COMP CC
+		                                                         ON IC.ENTP_NO = CC.ENTP_NO)V2
+		                          ON SS.CUST_NO = V2.CUST_NO
+		WHERE 1 = 1
+		AND SS.DEL_WHET = 0
+
+		
+		AND TO_CHAR(V.SCHE_START_DAY,'YYYY-MM-DD')=#{sysdate}
+
+	
+		 <if test="searchTxt != null and searchTxt != ''">
+				<choose>
+					<when test="searchGbn == 0">
+						AND V2.ENTP_NM LIKE '%' || #{searchTxt} || '%'
+					</when>
+					<when test="searchGbn == 1">
+						AND V.EMP_NM LIKE '%' || #{searchTxt} || '%'
+					</when>		
+				</choose>
+		</if>
+	</select>
+	
+	<select id="getSaleScheDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT I.CUST_EMAIL,I.CUST_NM, I.CUST_NO,V.EMP_NM,V.DEPT_NM, V.EMAIL, V.CELL_NO, V.SCHE_START_DAY, V.SCHE_START_DAY_TIME_H,V.SCHE_START_DAY_TIME_M,
+		       V.SCHE_END_DAY_TIME_H,V.SCHE_END_DAY_TIME_M,C.ENTP_NO, C.DELG_NM,C.DELG_TEL, C.BUSN_NO, C.ENTP_ADDR, C.ENTP_NM, I.CUST_CELL,V.SCHE_LOCT, V.SCHE_NM, V.SALE_SCHE_NO, V.SALE_PURP, V.ACTV_CONT,
+		      V.DEL_WHET, V.GODS_NO,V.GODS_NM, V.ATCH_FILE_NM, V.SCHE_NO, V.SALE_SCHE_ATCH_FILE_NO,V.EMP_NO
+		FROM INSD_CUST I INNER JOIN (SELECT V1.EMP_NO, V1.EMP_NM, V1.DEPT_NM, V1.EMAIL, V1.CELL_NO, V1.SCHE_NO, TO_CHAR(V1.SCHE_START_DAY,'YYYY-MM-DD') AS SCHE_START_DAY, 
+		                                    V1.SCHE_START_DAY_TIME_H, V1.SCHE_END_DAY_TIME_H,V1.SCHE_START_DAY_TIME_M, V1.SCHE_END_DAY_TIME_M, V1.SCHE_LOCT, V1.SCHE_NM, S.SALE_SCHE_NO, S.SALE_PURP, S.ACTV_CONT,
+		                                    S.DEL_WHET, S.CUST_NO, S.SALE_NO,G.GODS_NO, G.GODS_NM, SF.ATCH_FILE_NM, SF.SALE_SCHE_ATCH_FILE_NO
+		                             FROM SALE_SCHE S INNER JOIN (SELECT V.EMP_NO, V.EMP_NM, V.DEPT_NM, V.EMAIL, V.CELL_NO, S.SCHE_NO, S.SCHE_START_DAY, 
+		                                                                 TO_CHAR(S.SCHE_START_DAY, 'HH24') AS SCHE_START_DAY_TIME_H,
+		                                                                 TO_CHAR(S.SCHE_START_DAY, 'MI') AS SCHE_START_DAY_TIME_M,
+		                                                                 TO_CHAR(S.SCHE_END_DAY, 'HH24') AS SCHE_END_DAY_TIME_H,
+		                                                                 TO_CHAR(S.SCHE_END_DAY, 'MI') AS SCHE_END_DAY_TIME_M,
+		                                                                 S.SCHE_LOCT, S.SCHE_NM
+		                                                         FROM SCHE_ADD S INNER JOIN (SELECT E.EMP_NO, E.EMP_NM, V1.DEPT_NM, E.EMAIL, E.CELL_NO
+		                                                                                     FROM EMP E INNER JOIN ( SELECT H.DEPT_NO, D.DEPT_NM, H.EMP_NO
+		                                                                                                             FROM DEPT D INNER JOIN HR_ISUC H
+		                                                                                                                                 ON D.DEPT_NO = H.DEPT_NO) V1
+		                                                                                                        ON V1.EMP_NO = E.EMP_NO)V
+		                                                                             ON S.EMP_NO = V.EMP_NO)V1
+		                                                      ON S.SCHE_NO = V1.SCHE_NO
+		                                        LEFT OUTER JOIN GODS G
+		                                                      ON S.GODS_NO = G.GODS_NO
+		                                        LEFT OUTER JOIN SALE_SCHE_ATCH_FILE SF
+		                                                     ON S.SALE_SCHE_NO = SF.SALE_SCHE_NO
+		                                                      )V
+		                         ON I.CUST_NO = V.CUST_NO
+		                 INNER JOIN CUST_COMP C
+		                         ON I.ENTP_NO = C.ENTP_NO
+		WHERE 1 = 1
+		AND V.DEL_WHET = 0
+		AND V.SALE_SCHE_NO = #{salescheno}
+	</select>
+	
+	<insert id="addSaleScheMang" parameterType="hashmap">
+		INSERT INTO SALE_SCHE(SALE_SCHE_NO, SALE_PURP, ACTV_CONT, SCHE_NO, CUST_NO, GODS_NO ) 
+		VALUES (#{salescheno}, #{salepurp}, #{actvcont}, #{scheno}, #{custno}, #{godsno}) 
+	</insert>
+	
+	<insert id="addScheMang" parameterType="hashmap">
+		INSERT INTO SCHE_ADD(SCHE_NO, EMP_NO, SCHE_NM, SCHE_SORT,SCHE_START_DAY, SCHE_END_DAY,SCHE_CONT, SCHE_LOCT)
+		VALUES(#{scheno}, #{sEmpNo}, #{schenm}, 1, 
+				TO_DATE(#{schestartday}||#{schestartdaytimeh}||#{schestartdaytimem}, 'YYYY-MM-DD HH24:MI'),
+				TO_DATE(#{schestartday}||#{scheenddaytimeh}||#{scheenddaytimem}, 'YYYY-MM-DD HH24:MI'), #{actvcont}, #{scheloct})
+	</insert>
+	
+	<insert id="addSaleScheAtchFileScheMang" parameterType="hashmap">
+		INSERT INTO SALE_SCHE_ATCH_FILE(SALE_SCHE_ATCH_FILE_NO, SALE_SCHE_NO, ATCH_FILE_NM)
+		VALUES (#{salescheatchfileno}, #{salescheno}, #{atchfilenm})
+	</insert>
+	
+	<update id="updateSaleSche" parameterType="hashmap">
+		UPDATE SALE_SCHE SET SALE_PURP = #{salepurp}, 
+       				  	ACTV_CONT = #{actvcont},
+       				  	CUST_NO =  #{custno},
+       				  	GODS_NO = #{godsno}
+		WHERE SALE_SCHE_NO = #{salescheno}
+	</update>
+	
+	<update id="updateScheMang" parameterType="hashmap">
+		UPDATE SCHE_ADD SET SCHE_NM = #{schenm}, 
+       				  	SCHE_START_DAY = TO_DATE(#{schestartday}||#{schestartdaytimeh}||#{schestartdaytimem}, 'YYYY-MM-DD HH24:MI'),
+       				  	SCHE_END_DAY = TO_DATE(#{schestartday}||#{scheenddaytimeh}||#{scheenddaytimem}, 'YYYY-MM-DD HH24:MI'),
+       				  	SCHE_CONT = #{actvcont},
+       				  	SCHE_LOCT = #{scheloct}
+		WHERE SCHE_NO = #{scheno}
+	</update>
+	
+	<update id="updateSaleScheAtchFileScheMang" parameterType="hashmap">
+		UPDATE SALE_SCHE_ATCH_FILE SET ATCH_FILE_NM =  #{atchfilenm}
+		WHERE SALE_SCHE_NO = #{salescheno}
+	</update>
+	
+	<delete id="deleteSaleScheAtchFileScheMang" parameterType="hashmap">
+		DELETE FROM SALE_SCHE_ATCH_FILE
+		WHERE SALE_SCHE_NO = #{salescheno}
+	</delete>
+
+	<select id="getSaleScheAtchFileSelect" parameterType="hashmap" resultType="hashmap">
+		SELECT SALE_SCHE_ATCH_FILE_NO, SALE_SCHE_NO, ATCH_FILE_NM
+		FROM SALE_SCHE_ATCH_FILE
+	</select>
+	
+	<select id="getScheNo" resultType="String">
+		SELECT SCHE_ADD_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<select id="getSaleSchecheNo" resultType="String">
+		SELECT SALE_SCHE_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<select id="getSaleScheAtchFile" resultType="String">
+		SELECT SALE_SCHE_ATCH_FILE_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	
+	
+	<select id="getSaleScheAdd" parameterType="hashmap" resultType="hashmap">
+		SELECT CELL_NO, EMAIL 
+		FROM EMP
+		WHERE EMP_NO = #{sEmpNo}
+	</select>
+	
+	<select id="getSaleScheAddSearchCustComp" parameterType="hashmap" resultType="hashmap">
+		SELECT M.ENTP_NO, M.ENTP_NM, M.DELG_NM
+		FROM (SELECT ENTP_NO, ENTP_NM, DELG_NM, ROW_NUMBER() OVER(ORDER BY ENTP_NO DESC) AS RNUM
+				FROM CUST_COMP
+				WHERE 1 = 1
+				<if test="searchTxt1Hidden != null and searchTxt1Hidden != ''">
+					<choose>
+						<when test="searchGbn1Hidden == 0">
+							AND ENTP_NM LIKE '%' || #{searchTxt1Hidden} || '%'
+						</when>
+						<when test="searchGbn1Hidden == 1">
+							AND DELG_NM LIKE '%' || #{searchTxt1Hidden} || '%'
+						</when>		
+					</choose>
+				</if>
+				
+				)M
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleScheAddSearchCustCompCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CUST_COMP
+		WHERE 1 = 1
+		<if test="searchTxt1Hidden != null and searchTxt1Hidden != ''">
+				<choose>
+					<when test="searchGbn1Hidden == 0">
+						AND ENTP_NM LIKE '%' || #{searchTxt1Hidden} || '%'
+					</when>
+					<when test="searchGbn1Hidden == 1">
+						AND DELG_NM LIKE '%' || #{searchTxt1Hidden} || '%'
+					</when>		
+				</choose>
+		</if>
+	</select>
+
+	<select id="getSaleScheAddSearchInsdCust" parameterType="hashmap" resultType="hashmap">
+		SELECT M.CUST_NO, M.CUST_NM, M.CUST_CELL, M.ENTP_NM
+		FROM(SELECT IC.CUST_NO, IC.CUST_NM, IC.CUST_CELL, CC.ENTP_NM, ROW_NUMBER() OVER(ORDER BY CUST_NO DESC) AS RNUM
+			 FROM INSD_CUST IC INNER JOIN CUST_COMP CC
+		   	                          ON IC.ENTP_NO = CC.ENTP_NO
+		     WHERE 1 = 1
+				<if test="searchTxt2Hidden != null and searchTxt2Hidden != ''">
+					<choose>
+						<when test="searchGbn2Hidden == 0">
+							AND CUST_NM LIKE '%' || #{searchTxt2Hidden} || '%'
+						</when>
+						<when test="searchGbn2Hidden == 1">
+							AND ENTP_NM LIKE '%' || #{searchTxt2Hidden} || '%'
+						</when>		
+					</choose>
+				</if>
+				
+				)M
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleScheAddSearchInsdCustCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM INSD_CUST IC INNER JOIN CUST_COMP CC
+                                  ON IC.ENTP_NO = CC.ENTP_NO
+		WHERE 1 = 1
+		<if test="searchTxt2Hidden != null and searchTxt2Hidden != ''">
+			<choose>
+				<when test="searchGbn2Hidden == 0">
+					AND CUST_NM LIKE '%' || #{searchTxt2Hidden} || '%'
+				</when>
+				<when test="searchGbn2Hidden == 1">
+					AND ENTP_NM LIKE '%' || #{searchTxt2Hidden} || '%'
+				</when>		
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getSaleScheAddSearchGods" parameterType="hashmap" resultType="hashmap">
+		SELECT M.GODS_NO, M.GODS_NM, M.LOAN_KIND, M.LOAN_PERS, M.LOAN_PERD, M.LOAN_LIMT
+	   FROM (SELECT G.GODS_NM, G.LOAN_LIMT, G.LOAN_PERS, ROW_NUMBER() OVER(ORDER BY G.GODS_NO DESC) AS RNUM,
+	        G.GODS_NO, G.DEL_WHET, MC1.CODE_NM AS LOAN_KIND , MC2.CODE_NM AS LOAN_PERD
+	          FROM GODS G INNER JOIN LOAN_KIND LK 
+	                          ON G.GODS_NO = LK.GODS_NO
+	                  INNER JOIN GODS_MANG_CODE MC1
+	                          ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                         AND MC1.BIG_FRAC = 1
+	               INNER JOIN LOAN_PERD LP 
+	                      ON G.GODS_NO = LP.GODS_NO
+	              INNER JOIN GODS_MANG_CODE MC2
+	                      ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                      AND MC2.BIG_FRAC = 2
+	         WHERE 1 = 1
+            AND G.DEL_WHET = 0
+				<if test="searchTxt3Hidden != null and searchTxt3Hidden != ''">
+					<choose>
+						<when test="searchGbn3Hidden == 0">
+							AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>
+						<when test="searchGbn3Hidden == 1">
+							AND  MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>		
+					</choose>
+				</if>
+				
+				)M
+                  
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getSaleScheAddSearchGodsCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM GODS G INNER JOIN LOAN_KIND LK 
+	                          ON G.GODS_NO = LK.GODS_NO
+	                  INNER JOIN GODS_MANG_CODE MC1
+	                          ON LK.LOAN_KIND_NO = MC1.SMAL_FRAC 
+	                         AND MC1.BIG_FRAC = 1
+	               INNER JOIN LOAN_PERD LP 
+	                      ON G.GODS_NO = LP.GODS_NO
+	              INNER JOIN GODS_MANG_CODE MC2
+	                      ON LP.LOAN_PERD_NO = MC2.SMAL_FRAC 
+	                      AND MC2.BIG_FRAC = 2
+	         WHERE 1 = 1
+            AND G.DEL_WHET = 0
+		<if test="searchTxt3Hidden != null and searchTxt3Hidden != ''">
+					<choose>
+						<when test="searchGbn3Hidden == 0">
+							AND G.GODS_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>
+						<when test="searchGbn3Hidden == 1">
+							AND  MC1.CODE_NM LIKE '%' || #{searchTxt3Hidden} || '%'
+						</when>		
+					</choose>
+				</if>
+	</select>
+	
+	<select id="getScheAddMap" parameterType="hashmap" resultType="hashmap">
+		SELECT M.SCHE_NO
+		FROM(SELECT SCHE_NO,  ROW_NUMBER() OVER(ORDER BY SCHE_NO DESC ) AS RNUM 
+			 FROM SCHE_ADD 
+			 WHERE 1 = 1)M
+		WHERE 1 = 1
+		AND M.RNUM = 1
+	</select>
+
+	<select id="getSaleScheAddMap" parameterType="hashmap" resultType="hashmap">
+		SELECT M.SALE_SCHE_NO
+		FROM(SELECT SALE_SCHE_NO, ROW_NUMBER() OVER(ORDER BY SALE_SCHE_NO DESC ) AS RNUM 
+			 FROM SALE_SCHE 
+		     WHERE 1 = 1)M
+		WHERE 1 = 1
+		AND M.RNUM = 1
+	</select>
+	
+	<select id="getFullcalendar" parameterType="hashmap" resultType="hashmap">
+		SELECT V.SCHE_NM AS TITLE, TO_CHAR(V.SCHE_START_DAY, 'YYYY-MM-DD HH24:MI') AS "START", TO_CHAR(V.SCHE_END_DAY, 'YYYY-MM-DD HH24:MI') AS "END", SS.SALE_SCHE_NO AS ID
+      			,V.EMP_NO AS EMPNO, V1.DEPT_NO AS DEPTNO
+		FROM  SCHE_ADD V INNER JOIN SALE_SCHE SS
+		                          ON SS.SCHE_NO = V.SCHE_NO
+                         INNER JOIN (SELECT E.EMP_NO, D.DEPT_NO
+                                    FROM EMP E INNER JOIN HR_ISUC HI
+                                                       ON E.EMP_NO = HI.EMP_NO
+                                               INNER JOIN DEPT D
+                                                       ON HI.DEPT_NO = D.DEPT_NO)V1
+                                 ON V.EMP_NO = V1.EMP_NO
+                         
+		WHERE SS.DEL_WHET = 0
+	</select>
+	
+	<update id="deleteSaleSche" parameterType="hashmap">
+		UPDATE SALE_SCHE SET DEL_WHET = 1
+		WHERE SALE_SCHE_NO = #{salescheno}
+	</update>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

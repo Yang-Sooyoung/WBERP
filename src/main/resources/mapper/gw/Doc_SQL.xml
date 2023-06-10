@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="doc">
+	<select id="getDocCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM DOCM_BOX D INNER JOIN EMP E
+		                        ON D.EMP_NO = E.EMP_NO
+		                INNER JOIN HR_ISUC H
+		                        ON E.EMP_NO = H.EMP_NO
+		                INNER JOIN DEPT D
+		                        ON H.DEPT_NO = D.DEPT_NO
+		                INNER JOIN POSN P
+		                        ON H.POSN_NO = P.POSN_NO
+		WHERE DOCM_DEL_WHET = 0
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND DOCM_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND DOCM_CONT LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getDoc" parameterType="hashmap" resultType="hashmap">
+		SELECT DNO, BKNO, DOCM_NM, DEPT_NM, POSN_NM, EMP_NM, DOCM_REG_DATE, DOCM_HIT
+		FROM (SELECT D.DOCM_NO AS DNO, A.DOCM_NO AS BKNO, D.DOCM_NM, T.DEPT_NM, P.POSN_NM, E.EMP_NM, 
+		             TO_CHAR(D.DOCM_REG_DATE, 'YYYY-MM-DD') AS DOCM_REG_DATE, D.DOCM_HIT,
+		             ROW_NUMBER() OVER(ORDER BY D.DOCM_NO DESC) AS RNUM
+		      FROM DOCM_BOX D INNER JOIN EMP E
+		                              ON D.EMP_NO = E.EMP_NO
+		                      INNER JOIN HR_ISUC H
+		                              ON E.EMP_NO = H.EMP_NO
+		                      INNER JOIN DEPT T
+		                              ON H.DEPT_NO = T.DEPT_NO
+		                      INNER JOIN POSN P
+		                              ON H.POSN_NO = P.POSN_NO
+		                      LEFT OUTER JOIN (SELECT *
+		                                       FROM DOCM_BOKM
+		                                       WHERE EMP_NO = #{empno}) A
+		                                   ON D.DOCM_NO = A.DOCM_NO
+		      WHERE D.DOCM_DEL_WHET = 0
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND DOCM_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND DOCM_CONT LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		) B
+		WHERE B.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="docDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT A.DOCM_NO, A.EMP_NO, A.DOCM_NM, A.DEPT_NM, A.EMP_NM, A.DOCM_ATCH_FILE_NM, A.DOCM_PRES_START, A.DOCM_PRES_END, A.DOCM_CONT, A.DOCM_REG_DATE
+		FROM (SELECT DOCM_NO, D.EMP_NO, DOCM_NM, DEPT_NM, POSN_NM || EMP_NM AS EMP_NM, DOCM_ATCH_FILE_NM, 
+					 TO_CHAR(DOCM_PRES_START, 'YYYY-MM-DD') AS DOCM_PRES_START, 
+		             TO_CHAR(DOCM_PRES_END, 'YYYY-MM-DD') AS DOCM_PRES_END, DOCM_CONT, 
+		             TO_CHAR(DOCM_REG_DATE, 'YYYY-MM-DD') AS DOCM_REG_DATE
+		      FROM DOCM_BOX D INNER JOIN EMP E
+		                              ON D.EMP_NO = E.EMP_NO
+		                      INNER JOIN HR_ISUC H
+		                              ON E.EMP_NO = H.EMP_NO
+		                      INNER JOIN DEPT D
+		                              ON H.DEPT_NO = D.DEPT_NO
+		                      INNER JOIN POSN P
+		                              ON H.POSN_NO = P.POSN_NO
+		      WHERE DOCM_DEL_WHET = 0) A
+		WHERE DOCM_NO = #{docmno}
+	</select>
+	
+	<insert id="docAdd" parameterType="hashmap">
+		INSERT INTO DOCM_BOX(DOCM_NO, EMP_NO, DOCM_NM, DOCM_CONT, DOCM_ATCH_FILE_NM, 
+							 DOCM_PRES_START, DOCM_PRES_END)
+		VALUES(DOCM_BOX_SEQ.NEXTVAL, #{empno}, #{docmnm}, #{docmcont}, #{docmatchfilenm}, 
+			   #{docmpresstart}, #{docmpresend})
+	</insert>
+	
+	<update id="docUpdate" parameterType="hashmap">
+		UPDATE DOCM_BOX SET DOCM_NM = #{docmnm},
+			                DOCM_ATCH_FILE_NM = #{docmatchfilenm},
+			                DOCM_PRES_START = #{docmpresstart},
+			                DOCM_PRES_END = #{docmpresend},
+			                DOCM_CONT = #{docmcont}
+		WHERE DOCM_NO = #{docmno}
+	</update>
+
+	<update id="updateDocHit" parameterType="hashmap">
+		UPDATE DOCM_BOX SET DOCM_HIT = DOCM_HIT + 1
+		WHERE DOCM_NO = #{docmno}
+	</update>
+	
+	<update id="docDelete" parameterType="hashmap">
+		UPDATE DOCM_BOX SET DOCM_DEL_WHET = 1
+		WHERE DOCM_NO = #{docmno}
+	</update>
+	
+	<select id="getFavCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM DOCM_BOKM D INNER JOIN DOCM_BOX B
+		                         ON D.DOCM_NO = B.DOCM_NO
+		                 INNER JOIN EMP E
+		                         ON D.EMP_NO = E.EMP_NO
+		                 INNER JOIN HR_ISUC H
+		                         ON E.EMP_NO = H.EMP_NO
+		                 INNER JOIN DEPT D
+		                         ON H.DEPT_NO = D.DEPT_NO
+		                 INNER JOIN POSN P
+		                         ON H.POSN_NO = P.POSN_NO
+		WHERE DOCM_DEL_WHET = 0 AND D.EMP_NO = #{empno}
+	</select>
+	
+	<select id="getFavDoc" parameterType="hashmap" resultType="hashmap">
+		SELECT B.DOCM_NO, B.DOCM_NM, B.DEPT_NM, B.EMP_NM, B.DOCM_CONT, B.DOCM_REG_DATE, B.DOCM_HIT
+		FROM (SELECT M.DOCM_NO, D.DOCM_NM, T.DEPT_NM, POSN_NM || EMP_NM AS EMP_NM, D.DOCM_CONT,
+		               TO_CHAR(DOCM_REG_DATE, 'YYYY-MM-DD') AS DOCM_REG_DATE, DOCM_HIT,
+		               ROW_NUMBER() OVER(ORDER BY D.DOCM_NO DESC) AS RNUM
+		        FROM DOCM_BOX D INNER JOIN EMP E
+		                                ON D.EMP_NO = E.EMP_NO
+		                        INNER JOIN HR_ISUC H
+		                                ON E.EMP_NO = H.EMP_NO
+		                        INNER JOIN DEPT T
+		                                ON H.DEPT_NO = T.DEPT_NO
+		                        INNER JOIN POSN P
+		                                ON H.POSN_NO = P.POSN_NO
+		                        LEFT OUTER JOIN DOCM_BOKM M
+		                                     ON D.DOCM_NO = M.DOCM_NO
+		        WHERE DOCM_DEL_WHET = 0 AND M.DOCM_NO IS NOT NULL AND M.EMP_NO = #{empno}) B
+		WHERE RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<insert id="favUpdate" parameterType="hashmap">
+		INSERT INTO DOCM_BOKM(DOCM_NO, EMP_NO)
+		VALUES(#{docmno}, #{empno})
+	</insert>
+	
+	<delete id="favDelete" parameterType="hashmap">
+		DELETE FROM DOCM_BOKM
+		WHERE DOCM_NO = #{docmno}
+	</delete>
+</mapper>
+
+
+
+

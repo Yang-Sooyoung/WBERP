@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="temp">
+	<select id="getTempCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM TEMP
+		<if test="searchTxt != null and searchTxt != ''">
+  		WHERE TEMP_NM LIKE '%' || #{searchTxt} || '%'
+	  		<if test="select_cate != null and select_cate != ''">
+						AND CATG_NO LIKE '%' || #{select_cate} || '%'
+			</if>
+			<if test="select_ch != null and select_ch != ''">
+	                    AND CHAN_TYPE_NO LIKE '%' || #{select_ch} || '%'
+	         </if>
+         </if>
+	</select>
+	
+	<select id="getTempList" parameterType="hashmap" resultType="hashmap">
+		SELECT T.TEMP_NO, T.CHAN_TYPE, T.CATG_NM, T.TEMP_NM, T.REG_DT
+			FROM(SELECT T.TEMP_NO, C.CHAN_TYPE, TC.CATG_NM, T.TEMP_NM, 
+			        TO_CHAR(T.REG_DATE, 'YYYY-MM-DD')AS REG_DT,
+			        ROW_NUMBER() OVER(ORDER BY T.TEMP_NO DESC) AS RNUM
+				  FROM TEMP T INNER JOIN CHAN_TYPE C
+							    ON T.CHAN_TYPE_NO = C.CHAN_TYPE_NO
+							            INNER JOIN TEMP_CATG TC
+							    ON T.CATG_NO = TC.CATG_NO
+							    WHERE 1=1
+							<if test="searchTxt != null and searchTxt != ''">
+					  			AND T.TEMP_NM LIKE '%' || #{searchTxt} || '%'
+					  		</if>
+						  	<if test="select_cate != null and select_cate != ''">
+								AND T.CATG_NO LIKE '%' || #{select_cate} || '%'
+							</if>
+							<if test="select_ch != null and select_ch != ''">
+						        AND T.CHAN_TYPE_NO LIKE '%' || #{select_ch} || '%'
+						    </if>
+					         )T
+								WHERE T.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<insert id="tempMailAdd" parameterType="hashmap">
+		INSERT INTO TEMP(TEMP_NO, CATG_NO, CHAN_TYPE_NO, EMP_NO, TEMP_NM, TEMP_TITLE, TEMP_CONT)
+		VALUES(#{seq}, #{select_cate}, #{select_ch}, #{sEmpNo}, #{temp_nm}, #{temp_title}, #{temp_cont})
+	</insert>
+	
+	<insert id="tempMmsAdd" parameterType="hashmap">
+		INSERT INTO TEMP(TEMP_NO, CATG_NO, CHAN_TYPE_NO, EMP_NO, TEMP_NM, TEMP_CONT)
+		VALUES(#{seq}, #{select_cate}, #{select_ch}, #{sEmpNo}, #{temp_nm}, #{temp_cont})
+	</insert>
+	
+	<insert id="tempResrAdd" parameterType="hashmap">
+		INSERT INTO TEMP_RESR(TEMP_NO, RESR_ORDER, RESRWORD_NO)
+		VALUES (#{seq}, #{resrOrderList}, #{resrNoList})
+	</insert>	
+	
+	<select id="seq" resultType="String">
+		SELECT TEMP_SEQ.NEXTVAL 
+		FROM DUAL
+	</select>
+	
+	<select id = "getTempBoardDetail" parameterType = "hashmap" resultType="hashmap">
+		SELECT TEMP_NO, CATG_NO, CHAN_TYPE_NO, EMP_NO, TEMP_NM, TEMP_TITLE, TEMP_CONT, REG_DATE
+		FROM TEMP
+		WHERE TEMP_NO = #{tempNo}
+	</select>
+	
+	<select id = "getTempResrDetail" parameterType = "hashmap" resultType="hashmap">
+		SELECT TEMP_NO, RESRWORD_NO, RESR_ORDER
+		FROM TEMP_RESR
+		WHERE TEMP_NO = #{tempNo}	
+        ORDER BY RESR_ORDER
+	</select>
+	
+	<update id="tempMmsUpdate" parameterType="hashmap">
+		UPDATE TEMP SET TEMP_NO = #{tempNo},
+		                 CATG_NO = #{select_cate},
+		                 CHAN_TYPE_NO = #{select_ch},
+		                 EMP_NO = #{sEmpNo},
+		                 TEMP_NM = #{temp_nm},
+		                 TEMP_CONT = #{temp_cont}
+		WHERE TEMP_NO = #{tempNo}
+	</update>
+	
+	<update id="tempMailUpdate" parameterType="hashmap">
+		UPDATE TEMP SET TEMP_NO = #{tempNo},
+		                 CATG_NO = #{select_cate},
+		                 CHAN_TYPE_NO = #{select_ch},
+		                 EMP_NO = #{sEmpNo},
+		                 TEMP_NM = #{temp_nm},
+		                 TEMP_TITLE = #{temp_title},
+		                 TEMP_CONT = #{temp_cont}
+		WHERE TEMP_NO = #{tempNo}
+	</update>
+	
+	<update id="tempResrUpdate" parameterType="hashmap">
+		UPDATE TEMP_RESR SET RESR_ORDER = #{resrOrderList}
+		WHERE TEMP_NO = #{tempNo}
+		AND RESRWORD_NO = #{resrNoList}
+	</update>
+	
+	<delete id="tempBoardDelete" parameterType="hashmap">
+		DELETE FROM TEMP
+		WHERE TEMP_NO= #{tempNo}
+	</delete>
+	
+	<delete id="tempResrDelete" parameterType="hashmap">
+		DELETE FROM TEMP_RESR
+		WHERE TEMP_NO= #{tempNo}
+	</delete>
+	
+	<insert id ="tempMmsAddUpdate" parameterType="hashmap">
+		INSERT INTO TEMP(TEMP_NO, CATG_NO, CHAN_TYPE_NO, EMP_NO, TEMP_NM, TEMP_CONT)
+		VALUES(#{tempNo}, #{select_cate}, #{select_ch}, #{sEmpNo}, #{temp_nm}, #{temp_cont})
+	</insert>
+	
+	<insert id = "tempMailAddUpdate" parameterType="hashmap">
+		INSERT INTO TEMP(TEMP_NO, CATG_NO, CHAN_TYPE_NO, EMP_NO, TEMP_NM, TEMP_TITLE, TEMP_CONT)
+		VALUES(#{tempNo}, #{select_cate}, #{select_ch}, #{sEmpNo}, #{temp_nm}, #{temp_title}, #{temp_cont})
+	</insert>
+	
+	<insert id = "tempResrAddUpdate" parameterType="hashmap">
+		INSERT INTO TEMP_RESR(TEMP_NO, RESR_ORDER, RESRWORD_NO)
+		VALUES (#{tempNo}, #{resrOrderList}, #{resrNoList})
+	</insert>
+	
+	<select id = "getUsedTemp" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM CUST_GROUP_CHAN
+		WHERE TEMP_NO = #{tempNo}
+	</select>
+	
+	<select id = "getTempCateCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM TEMP_CATG
+	</select>
+	
+	<select id = "getTempCateList" parameterType="hashmap" resultType="hashmap">
+		SELECT CATG_NO, CATG_NM
+		FROM TEMP_CATG
+		ORDER BY CATG_NO
+	</select>
+	
+	<insert id = "tempCateAdd"  parameterType="hashmap">
+		INSERT INTO TEMP_CATG(CATG_NO, CATG_NM)
+    	VALUES (TEMP_CATG_SEQ.NEXTVAL , #{cate_tbox})
+	</insert>
+	
+	<select id = "duplTempCateCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM TEMP_CATG
+		WHERE CATG_NM = #{cate_tbox}
+	</select>
+	
+	<select id = "getTempChanList" parameterType="hashmap" resultType="hashmap">
+		SELECT CHAN_TYPE_NO, CHAN_TYPE
+		FROM  CHAN_TYPE
+		ORDER BY CHAN_TYPE_NO
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

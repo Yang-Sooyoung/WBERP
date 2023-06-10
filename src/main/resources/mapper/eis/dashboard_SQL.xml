@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dashboard">
+
+
+	<select id="getDashboard" parameterType="hashmap" resultType="hashmap">
+		SELECT DASB_NO,EMP_NO,DASB_NM, EXPN
+		FROM DASHBOARD
+		
+		ORDER BY DASB_NO ASC
+
+	</select>
+	
+	
+	<select id="getChartDrawList" parameterType="hashmap" resultType="hashmap">
+		SELECT D.DASB_NO, D.EMP_NO, WIDG_NO, W.ATTCH_NO, AT.TITLE, AT.ATTCH_QUERY,CHART_TYPE, WIDG_ORDER
+		FROM DASHBOARD D INNER JOIN WIDGET W
+                         ON D.DASB_NO = W.DASB_NO
+                 INNER JOIN ATTCH_LIST AT
+                         ON W.ATTCH_NO = AT.ATTCH_NO
+		WHERE D.DASB_NO = #{DASB_NO}
+		ORDER BY WIDG_ORDER
+	</select>
+	
+	<select id="getChartDrawCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM (
+				SELECT D.DASB_NO, D.EMP_NO, WIDG_NO, W.ATTCH_NO, AT.TITLE, AT.ATTCH_QUERY,CHART_TYPE, WIDG_ORDER
+				FROM DASHBOARD D INNER JOIN WIDGET W
+                  				         ON D.DASB_NO = W.DASB_NO
+              				     INNER JOIN ATTCH_LIST AT
+                         			     ON W.ATTCH_NO = AT.ATTCH_NO
+				WHERE D.DASB_NO = #{DASB_NO}
+				ORDER BY WIDG_ORDER
+        )
+	</select>
+	
+	<select id="getDashboardCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM DASHBOARD
+		
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND DASB_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND DASB_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<insert id="addDashboard" parameterType="hashmap">
+		INSERT INTO DASHBOARD(DASB_NO, EMP_NO, DASB_NM, EXPN)
+		VALUES(DASHBOARD_SEQ.NEXTVAL, #{EMP_NO}, #{DASB_NM}, #{EXPN})
+	</insert>
+	
+	<select id="getLoginInfo" parameterType="hashmap" resultType="hashmap">
+      SELECT EMP_NO, EMP_NM, CASE WHEN  EMP_PW = #{EMP_PW}
+                              THEN 'TRUE'
+                              ELSE 'FALSE'
+                        END AS EMP_PW_RES
+      FROM EMP
+      WHERE EMAIL = #{EMAIL}
+    </select>
+   
+	<update id="dasbUpdate" parameterType="hashmap">
+		UPDATE DASHBOARD SET DASB_NM = #{DASB_NM},
+		                 	 EXPN = #{EXPN}
+		WHERE DASB_NO = #{DASB_NO}
+	</update>
+	
+	
+	<select id="getDashboardDetail" parameterType="hashmap" resultType="hashmap">
+      SELECT DASB_NO, DASB_NM, EXPN, EMP_NO
+      FROM DASHBOARD
+      WHERE DASB_NO = #{DASB_NO}
+	</select>
+	
+	
+	
+	
+	<select id="getWidg" parameterType="hashmap" resultType="hashmap">
+		SELECT WIDG_NO, DASB_NO, ATTCH_NO, TITLE, EMP_NO, CHART_TYPE, WIDG_ORDER
+		FROM (
+				SELECT WIDG_NO, DASB_NO, W.ATTCH_NO, T.TITLE, W.EMP_NO, CHART_TYPE, WIDG_ORDER, ROW_NUMBER() OVER(ORDER BY WIDG_NO DESC) AS RNUM
+				FROM WIDGET W INNER JOIN ATTCH_LIST T
+									  ON W.ATTCH_NO = T.ATTCH_NO
+				WHERE DASB_NO = #{DASB_NO}
+				
+				
+				) A
+		WHERE A.RNUM BETWEEN #{startCnt} AND #{endCnt}
+		ORDER BY WIDG_ORDER ASC
+		
+	</select>
+	
+	<select id="getWidgCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM WIDGET W INNER JOIN ATTCH_LIST T
+                            ON W.ATTCH_NO = T.ATTCH_NO
+		
+		AND DASB_NO = #{DASB_NO}
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND WIDG_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND TITLE LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	
+	<!-- 검증 완료 후 실행 -->
+	<insert id="addWidg" parameterType="hashmap">
+		INSERT INTO WIDGET(WIDG_NO, DASB_NO, ATTCH_NO, EMP_NO, CHART_TYPE, WIDG_ORDER)
+		VALUES(WIDGET_SEQ.NEXTVAL, #{DASB_NO}, #{ATTCH_NO}, #{EMP_NO}, #{CHART_TYPE}, #{WIDG_ORDER})
+	</insert>
+	
+	<!-- order 중복값 검증 true = 실행 -->
+	<update id="updateOrder" parameterType="hashmap">
+		UPDATE WIDGET SET WIDG_ORDER = WIDG_ORDER + 1
+		WHERE DASB_NO = #{DASB_NO}
+		AND WIDG_ORDER >= #{ORDER_KEY}
+	</update>
+	
+	<!-- order 중복값 검증 -->
+	<select id="checkOrder" parameterType="hashmap" resultType="hashmap">
+		SELECT WIDG_ORDER
+		FROM WIDGET
+		WHERE DASB_NO = #{DASB_NO}
+		
+	</select>
+	
+	
+	
+	
+	
+	
+	
+	<update id="widgUpdate" parameterType="hashmap">
+		UPDATE WIDGET SET CHART_TYPE = #{CHART_TYPE},
+		                  WIDG_ORDER = #{WIDG_ORDER},
+		                  ATTCH_NO = #{ATTCH_NO}
+		WHERE WIDG_NO = #{WIDG_NO}
+	</update>
+	
+	
+	
+	<select id="getWidgDetail" parameterType="hashmap" resultType="hashmap">
+      SELECT WIDG_NO, DASB_NO, W.ATTCH_NO, W.EMP_NO, CHART_TYPE, WIDG_ORDER, AT.TITLE, AT.ATTCH_QUERY
+      FROM WIDGET W INNER JOIN ATTCH_LIST AT
+                            ON W.ATTCH_NO = AT.ATTCH_NO
+      WHERE WIDG_NO = #{WIDG_NO}
+	</select>
+	
+	
+	
+	
+	
+	<select id="getDashboardList" parameterType="hashmap" resultType="hashmap">
+		SELECT DASB_NO,EMP_NO,DASB_NM, EXPN
+		FROM (
+				SELECT DASB_NO,EMP_NO,DASB_NM, EXPN, ROW_NUMBER() OVER(ORDER BY DASB_NO DESC) AS RNUM
+				FROM DASHBOARD
+				
+				<if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND DASB_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND DASB_NO LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				) D
+		WHERE D.RNUM BETWEEN #{startCnt} AND #{endCnt}
+		
+	</select>
+	
+	<delete id="deleteWidg" parameterType="hashmap">
+		DELETE FROM WIDGET
+		WHERE WIDG_NO = #{WIDG_NO}
+	</delete>
+
+	<delete id="deleteDasb" parameterType="hashmap">
+		DELETE FROM DASHBOARD
+		WHERE DASB_NO = #{DASB_NO}
+	</delete>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

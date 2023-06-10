@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="EmpMang">
+	<select id="getEmpMangCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EMP E INNER JOIN HR_ISUC H
+		                   ON E.EMP_NO = H.EMP_NO
+		           INNER JOIN DEPT D
+		                   ON H.DEPT_NO = D.DEPT_NO
+		           INNER JOIN POSN P 
+		                   ON H.POSN_NO = P.POSN_NO
+			<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND E.EMP_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND E.EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getEmpMang" parameterType="hashmap" resultType="hashmap">
+		SELECT EMP_NO, EMP_NM, DEPT_NM, POSN_NM, START_DATE
+		FROM (SELECT E.EMP_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, TO_CHAR(H.START_DATE, 'YYYY-MM-DD') AS START_DATE,
+		       ROW_NUMBER() OVER(ORDER BY E.EMP_NO DESC) AS RNUM
+			FROM EMP E INNER JOIN HR_ISUC H
+			                   ON E.EMP_NO = H.EMP_NO
+			           INNER JOIN DEPT D
+			                   ON H.DEPT_NO = D.DEPT_NO
+			           INNER JOIN POSN P 
+			                   ON H.POSN_NO = P.POSN_NO
+         <if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND E.EMP_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND E.EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		) A
+		WHERE A.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getempMangDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT  E.EMP_NM, E.EMP_NO, E.POST_NO, E.ADDR, E.DETL_ADDR, E.BIRTH, E.SEX_CODE, E.LOCAL_CODE, E.TEL_NO, E.CELL_NO, E.EMAIL,
+		        E.ACNT_NM, E.ACNT_NO, B.BANK_NM, P.POSN_NM,
+		        H.START_DATE, H.END_DATE, Z.CERT_NM, Z.ISUD_AGNC, Z.ISUD_DATE, DECODE(F.RELT_CODE, 0, '부', 1, '모', 2,'형제') AS RELT_CODE,
+		        F.FAML_NM, F.FAML_JOB, DECODE(F.COHB_WHET, 0, '동거', 1, '비동거') AS COHB_WHET, C.COMPANY_NM, C.CHAG_TASK, C.SECTORS_NO, DECODE(C.EMPLOY_CODE, 0, '계약직', 1, '정직원') AS EMPLOY_CODE  
+		FROM EMP E INNER JOIN HR_ISUC H
+		                   ON E.EMP_NO = H.EMP_NO
+		           INNER JOIN BANK B
+		                   ON E.BANK_NO = B.BANK_NO
+		           INNER JOIN CAREER C
+                   		   ON E.EMP_NO = C.EMP_NO
+		           INNER JOIN CERTIFICATE Z
+		                   ON E.EMP_NO = Z.EMP_NO
+		           INNER JOIN FAMILY F
+		                   ON E.EMP_NO = F.EMP_NO
+		           INNER JOIN POSN P
+		                   ON H.POSN_NO = P.POSN_NO
+		WHERE E.EMP_NO = #{emp_no}
+		</select>
+		
+</mapper>

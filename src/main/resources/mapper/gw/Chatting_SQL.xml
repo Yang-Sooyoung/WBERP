@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="chatting">
+
+	<select id="getChattingCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM CHATTING_ROOM
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND CHAT_CONT LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND CHAT_ROOM_PERS_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getChatting" parameterType="hashmap" resultType="hashmap">
+		SELECT DISTINCT A.CHAT_ROOM_NO, A.CHAT_ROOM_PERS_NM, A.ME, A.CHAT_NO, A.CHAT_CONT, A.CHAT_REG_DATE, B.CNT
+		,A.CHAT_ATCH_FILE_NM
+		FROM
+		(SELECT DISTINCT A.CHAT_ROOM_NO, A.CHAT_ROOM_PERS_NM, A.ME, A.U, A.CHAT_NO, A.CHAT_CONT, A.CHAT_REG_DATE
+		,A.CHAT_ATCH_FILE_NM
+		FROM
+		(SELECT DISTINCT R.CHAT_ROOM_NO, P.CHAT_ROOM_PERS_NM, P.EMP_NO AS ME, P2.EMP_NO AS U, E.EMP_NM, C.CHAT_NO, C.CHAT_CONT, TO_CHAR(C.CHAT_REG_DATE, 'YYYY-MM-DD HH24:MI') AS CHAT_REG_DATE,
+		C.CHAT_ATCH_FILE_NM,
+		RANK() OVER(PARTITION BY R.CHAT_ROOM_NO ORDER BY C.CHAT_NO DESC) AS RNK
+		FROM CHATTING_ROOM R INNER JOIN CHAT_ROOM_PERS P
+		                            ON R.CHAT_ROOM_NO = P.CHAT_ROOM_NO
+		                    INNER JOIN CHAT_ROOM_PERS P2
+		                            ON P.CHAT_ROOM_NO = P2.CHAT_ROOM_NO
+		                            AND P.EMP_NO != P2.EMP_NO
+		                    INNER JOIN EMP E
+		                               ON E.EMP_NO = P2.EMP_NO 
+		                    INNER JOIN EMP E1
+		                               ON E1.EMP_NO = P.EMP_NO
+		                    INNER JOIN CHATTING C
+		                            		ON R.CHAT_ROOM_NO = C.CHAT_ROOM_NO
+		WHERE P.EMP_NO = #{sEmpNo}) A
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND A.CHAT_CONT LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND A.CHAT_ROOM_PERS_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		WHERE A.RNK = 1
+		ORDER BY A.CHAT_REG_DATE DESC) A
+		INNER JOIN 
+		(SELECT A.CHAT_ROOM_NO, SUM(A.CNT) AS CNT
+		FROM
+		(SELECT C.CHAT_ROOM_NO, C.CHAT_NO, NVL(CNT,0) AS CNT,
+		ROW_NUMBER() OVER(PARTITION BY C.CHAT_ROOM_NO ORDER BY C.EMP_NO ASC) AS RNUM
+		FROM CHATTING C LEFT OUTER JOIN
+		(SELECT C.CHAT_NO, COUNT(*) AS CNT
+		 FROM CHATTING C INNER JOIN CHAT_ROOM_PERS P
+		                        ON C.CHAT_ROOM_NO = P.CHAT_ROOM_NO
+		                        AND C.CHAT_NO > P.LAST_CHAT_NO
+		                WHERE P.EMP_NO = #{sEmpNo}
+		                GROUP BY C.CHAT_NO, C.CHAT_ROOM_NO) A
+		                ON C.CHAT_NO = A.CHAT_NO) A
+		
+		GROUP BY A.CHAT_ROOM_NO) B
+		ON A.CHAT_ROOM_NO = B.CHAT_ROOM_NO
+        
+	</select>
+	
+	<select id="getChatDetailCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM CHATTING C INNER JOIN EMP E
+                        		ON C.EMP_NO = E.EMP_NO
+		WHERE CHAT_DEL_WHET = 0
+		 <if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND CHAT_CONT LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				
+			</choose>
+		</if>
+	</select>
+	
+	<select id="getChatDetail" parameterType="Integer" resultType="hashmap">
+		SELECT A.CHAT_ROOM_NO, A.EMP_NO, A.EMP_NM, A.CHAT_NO, A.CHAT_CONT, A.CHAT_REG_DATE, B.CNT, A.CHAT_ATCH_FILE_NM
+		FROM (SELECT R.CHAT_ROOM_NO, E.EMP_NM, E.EMP_NO, C.CHAT_NO, C.CHAT_CONT, 
+				TO_CHAR(C.CHAT_REG_DATE, 'YYYY-MM-DD HH24:MI') AS CHAT_REG_DATE,
+				C.CHAT_ATCH_FILE_NM
+				FROM CHATTING C INNER JOIN EMP E
+		               		 		    ON C.EMP_NO = E.EMP_NO
+		                        INNER JOIN CHATTING_ROOM R
+		                                ON C.CHAT_ROOM_NO = R.CHAT_ROOM_NO
+		        WHERE C.CHAT_DEL_WHET = 0
+		        AND R.CHAT_ROOM_NO = #{chatroom}
+		        ORDER BY C.CHAT_NO ASC) A 
+		        INNER JOIN (SELECT C.CHAT_NO, NVL(CNT,0) AS CNT
+		                    FROM CHATTING C LEFT OUTER JOIN
+		                    (SELECT C.CHAT_NO, COUNT(*) AS CNT
+		                     FROM CHATTING C INNER JOIN CHAT_ROOM_PERS P
+		                                             ON C.CHAT_ROOM_NO = P.CHAT_ROOM_NO
+		                                            AND C.CHAT_NO > P.LAST_CHAT_NO
+		                                    GROUP BY C.CHAT_NO) A
+		                                             ON C.CHAT_NO = A.CHAT_NO) B
+		                ON A.CHAT_NO =B.CHAT_NO
+        <if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND CHAT_CONT LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				
+			</choose>
+		</if>
+	</select>
+	
+	<insert id="getChatSend" parameterType="hashmap">
+		INSERT INTO CHATTING(CHAT_NO, CHAT_ROOM_NO, EMP_NO, CHAT_CONT, CHAT_ATCH_FILE_NM)
+		VALUES (CHATTING_SEQ.NEXTVAL, #{chatroomno}, #{sEmpNo}, #{chatcont}, #{chatatchfilenm})
+	</insert>
+	
+	<select id="getName" parameterType="hashmap" resultType="hashmap">
+		SELECT A.CHAT_ROOM_NO, MAX(SUBSTR(SYS_CONNECT_BY_PATH(A.EMP_NM, ','), 2)) AS NAME
+		FROM (
+		SELECT CRP.CHAT_ROOM_NO, E.EMP_NM, ROW_NUMBER() OVER(PARTITION BY CRP.CHAT_ROOM_NO ORDER BY E.EMP_NO ASC) AS RNUM
+		FROM CHAT_ROOM_PERS CRP INNER JOIN EMP E
+		                                ON CRP.EMP_NO = E.EMP_NO
+		                               AND E.EMP_NO != #{sEmpNo}
+		WHERE CRP.CHAT_ROOM_NO = #{chatroom}) A
+		START WITH A.RNUM = 1
+		CONNECT BY PRIOR A.RNUM = A.RNUM - 1 AND A.CHAT_ROOM_NO = A.CHAT_ROOM_NO
+		GROUP BY A.CHAT_ROOM_NO
+	</select>
+	
+	<update id="updateChat" parameterType="hashmap">
+		UPDATE CHAT_ROOM_PERS
+		SET LAST_CHAT_NO = #{lastChatNo}
+		WHERE CHAT_ROOM_NO = #{chatRoomNo}
+		AND EMP_NO = #{sEmpNo}
+	</update>
+	
+	<select id="getMaxNo" resultType="Integer">
+		SELECT NVL(MAX(CHAT_NO), 0) AS MAXNO
+		FROM CHATTING
+	</select>
+	
+	<select id="chatReadCnt" parameterType="hashmap" resultType="Integer">
+		SELECT SUM(A.CNT) AS CNT
+		FROM
+		(SELECT C.CHAT_NO, NVL(CNT,0) AS CNT,
+		ROW_NUMBER() OVER(PARTITION BY C.CHAT_ROOM_NO ORDER BY C.EMP_NO ASC) AS RNUM
+		FROM CHATTING C LEFT OUTER JOIN
+		(SELECT C.CHAT_NO, COUNT(*) AS CNT
+		 FROM CHATTING C INNER JOIN CHAT_ROOM_PERS P
+		                        ON C.CHAT_ROOM_NO = P.CHAT_ROOM_NO
+		                        AND C.CHAT_NO > P.LAST_CHAT_NO
+		                WHERE P.EMP_NO = #{sEmpNo}
+		                GROUP BY C.CHAT_NO, C.CHAT_ROOM_NO) A
+		                ON C.CHAT_NO = A.CHAT_NO) A
+	</select>
+	
+	<delete id="deleteChat" parameterType="hashmap">
+		DELETE FROM CHAT_ROOM_PERS
+		WHERE CHAT_ROOM_NO = #{chatroom}
+		AND EMP_NO = #{sEmpNo}
+	</delete>
+	
+	<insert id="getChatRoom" parameterType="hashmap">
+		INSERT INTO CHATTING_ROOM(CHAT_ROOM_NO)
+		VALUES (#{chatroom})
+	</insert>
+	
+	<insert id="getChatRoomPers" parameterType="hashmap">
+		INSERT INTO CHAT_ROOM_PERS(CHAT_ROOM_NO, EMP_NO, CHAT_ROOM_PERS_NM)
+		VALUES (#{chatroom}, #{empno}, #{chatroompersnm})
+	</insert>
+	
+	<select id="getChatRoomNO" resultType="String">
+		SELECT CHATTING_ROOM_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="notice">
+	<select id="getNoticeCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM NOTICE
+	</select>
+	
+	<select id="getNotice" parameterType="hashmap" resultType="hashmap">
+		SELECT NOTC_NO, DEPT_NM, EMP_NM, NOTC_DATE, NOTC_SORT, NOTC_CONT, NOTC_READ_WHET
+		FROM (SELECT NOTC_NO, DEPT_NM, POSN_NM || EMP_NM AS EMP_NM, TO_CHAR(NOTC_DATE, 'YYYY.MM.DD') AS NOTC_DATE, N.EMP_NO,
+		             NOTC_SORT, NOTC_CONT, NOTC_READ_WHET,
+		             ROW_NUMBER() OVER(ORDER BY NOTC_NO DESC) AS RNUM
+		      FROM NOTICE N INNER JOIN EMP E
+		                            ON N.EMP_NO = E.EMP_NO
+		                    INNER JOIN HR_ISUC H
+		                            ON E.EMP_NO = H.EMP_NO
+		                    INNER JOIN DEPT D
+		                            ON H.DEPT_NO = D.DEPT_NO
+		                    INNER JOIN POSN P
+		                            ON H.POSN_NO = P.POSN_NO) A
+		WHERE EMP_NO = #{sEmpNo}
+		ORDER BY NOTC_NO DESC
+		
+	</select>
+	
+	<select id="getReadCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM NOTICE
+		WHERE NOTC_READ_WHET = 0 
+		AND EMP_NO = #{sEmpNo}
+	</select>
+	
+	<update id="noticeUpdate" parameterType="hashmap">
+		UPDATE NOTICE SET NOTC_READ_WHET = 1
+		WHERE NOTC_NO = #{notcno}
+	</update>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

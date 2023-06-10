@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="addwork">
+	<select id="getAddWorkCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EMP E INNER JOIN ADD_WORK_MANG A
+            		       ON E.EMP_NO = A.EMP_NO
+               	   INNER JOIN ATED_CODE_MANG T
+                           ON A.ATED_CODE_NO = T.ATED_CODE_NO
+               	   INNER JOIN HR_ISUC H
+                       	   ON E.EMP_NO = H.EMP_NO
+                 		   AND H.END_DATE IS NULL
+                       	   AND H.STATE = 1
+                   INNER JOIN DEPT D
+                       	   ON H.DEPT_NO = D.DEPT_NO
+               	   INNER JOIN POSN P
+                       	   ON H.POSN_NO = P.POSN_NO
+		WHERE 1 = 1
+		AND A.DEL_WHET = 0
+		<if test="searchTxt != null and searchTxt != ''"> 
+			<choose>
+				<when test="searchGbn eq 0">
+					AND E.EMP_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND T.ATED_CODE_EXPN LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 3">
+					AND A.REG_DAY LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		<if test="searchGbn2 != null"> 
+			AND T.ATED_CODE_NM LIKE '%' || #{searchGbn2} || '%'
+		</if>
+	</select>
+	<select id="getAddWorkList" resultType="hashmap">
+		SELECT S.ADD_WORK_NO, S.EMP_NO, S.EMP_NM, S.DEPT_NM, S.POSN_NM, S.ATED_CODE_NM, S.ATED_CODE_EXPN, S.CONT, S.REG_DAY, S.START_TIME, S.END_TIME    
+		FROM ( SELECT A.ADD_WORK_NO, E.EMP_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, T.ATED_CODE_NM, T.ATED_CODE_EXPN, A.CONT, TO_CHAR(A.REG_DAY,'YYYY-MM-DD') AS REG_DAY, TO_CHAR(A.START_TIME,'HH24:MI') AS START_TIME, TO_CHAR(A.END_TIME,'HH24:MI') AS END_TIME,
+         	    	  ROW_NUMBER() OVER(ORDER BY A.ADD_WORK_NO ASC) AS RNUM
+      		   FROM EMP E INNER JOIN ADD_WORK_MANG A
+              		              ON E.EMP_NO = A.EMP_NO
+                 		  INNER JOIN ATED_CODE_MANG T
+                         		  ON A.ATED_CODE_NO = T.ATED_CODE_NO
+                 		  INNER JOIN HR_ISUC H
+                         		  ON E.EMP_NO = H.EMP_NO
+                   		          AND H.END_DATE IS NULL
+                         		  AND H.STATE = 1
+                  		  INNER JOIN DEPT D
+                         		  ON H.DEPT_NO = D.DEPT_NO
+                 	      INNER JOIN POSN P
+                         		  ON H.POSN_NO = P.POSN_NO
+        	   WHERE 1 = 1 
+        	   AND A.DEL_WHET = 0
+        	   <if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="searchGbn eq 0">
+							AND E.EMP_NO LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 2">
+							AND T.ATED_CODE_EXPN LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 3">
+							AND A.REG_DAY LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				<if test="searchGbn2 != null"> 
+					AND T.ATED_CODE_NM LIKE '%' || #{searchGbn2} || '%'
+				</if>
+        	  ) S
+		WHERE S.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<select id="getAddWorkDetailCont" parameterType="hashmap" resultType="hashmap">
+		 SELECT A.ADD_WORK_NO, E.EMP_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, T.ATED_CODE_NM, T.ATED_CODE_EXPN, A.CONT, TO_CHAR(A.REG_DAY,'YYYY-MM-DD') AS REG_DAY, TO_CHAR(A.START_TIME,'HH24:MI') AS START_TIME, TO_CHAR(A.END_TIME,'HH24:MI') AS END_TIME
+      	 FROM EMP E INNER JOIN ADD_WORK_MANG A
+              		              ON E.EMP_NO = A.EMP_NO
+                 		  INNER JOIN ATED_CODE_MANG T
+                         		  ON A.ATED_CODE_NO = T.ATED_CODE_NO
+                 		  INNER JOIN HR_ISUC H
+                         		  ON E.EMP_NO = H.EMP_NO
+                   		          AND H.END_DATE IS NULL
+                         		  AND H.STATE = 1
+                  		  INNER JOIN DEPT D
+                         		  ON H.DEPT_NO = D.DEPT_NO
+                 	      INNER JOIN POSN P
+                         		  ON H.POSN_NO = P.POSN_NO
+         WHERE 1 = 1 
+         AND A.DEL_WHET = 0
+         AND A.ADD_WORK_NO = #{add_work_no}
+    </select>
+    <insert id="addWorkAdd" parameterType="hashmap">
+		INSERT INTO ADD_WORK_MANG(ADD_WORK_NO, EMP_NO, ATED_CODE_NO, CONT, START_TIME, END_TIME)
+		VALUES(ADD_WORK_MANG_SEQ.NEXTVAL, ${sEmpNo}, #{ated_code_no}, #{cont1}, TO_DATE(#{start_time1},'HH24:MI'), TO_DATE(#{end_time1},'HH24:MI'))
+	</insert>
+	<update id="addWorkUpdate" parameterType="hashmap">
+		UPDATE ADD_WORK_MANG SET ATED_CODE_NO = #{ated_code_no},
+								 EMP_NO = #{emp_no2},
+								 CONT = #{cont2},
+								 START_TIME = TO_DATE(#{start_time2},'HH24:MI'),
+								 END_TIME = TO_DATE(#{end_time2},'HH24:MI')
+		WHERE ADD_WORK_NO = #{add_work_no}
+	</update>
+	<update id="addWorkDelete" parameterType="hashmap">
+		UPDATE ADD_WORK_MANG SET DEL_WHET = 1
+		WHERE ADD_WORK_NO = #{add_work_no}
+	</update>
+</mapper>

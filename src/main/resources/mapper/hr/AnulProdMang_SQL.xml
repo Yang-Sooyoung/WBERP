@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="anulprod">
+	<select id="getAnulProdCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+	 	FROM HR_ISUC H INNER JOIN ANUL_PROD_MANG A
+				                       ON H.EMP_NO = A.EMP_NO
+				               INNER JOIN EMP E
+				                       ON E.EMP_NO = H.EMP_NO
+				                       AND H.END_DATE IS NULL
+				                       AND H.STATE = 1
+				               INNER JOIN DEPT D
+				                       ON H.DEPT_NO = D.DEPT_NO
+				               INNER JOIN POSN P
+				                       ON H.POSN_NO = P.POSN_NO
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''"> 
+			<choose>
+				<when test="searchGbn eq 0">
+					AND E.EMP_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 2">
+					AND A.STAD_YEAR_LIMT LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		<if test="searchGbn2 != null"> 
+			AND A.STAD_YEAR_LIMT LIKE '%' || #{searchGbn2} || '%'
+		</if>
+	</select>
+	<select id="getAnulProdList" resultType="hashmap">
+		SELECT S.ANUL_PROD_NO, S.EMP_NO, S.EMP_NM, S.DEPT_NM, S.POSN_NM, S.STAD_YEAR_LIMT, S.OCUR_ANUL 
+		FROM ( SELECT A.ANUL_PROD_NO, E.EMP_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.STAD_YEAR_LIMT, A.OCUR_ANUL,
+		       ROW_NUMBER() OVER(ORDER BY A.ANUL_PROD_NO ASC) AS RNUM
+			   FROM HR_ISUC H INNER JOIN ANUL_PROD_MANG A
+			                          ON H.EMP_NO = A.EMP_NO
+			                  INNER JOIN EMP E
+			                          ON E.EMP_NO = H.EMP_NO
+			                          AND H.END_DATE IS NULL
+			                          AND H.STATE = 1
+			                  INNER JOIN DEPT D
+			                          ON H.DEPT_NO = D.DEPT_NO
+			                  INNER JOIN POSN P
+			                          ON H.POSN_NO = P.POSN_NO
+		  	   WHERE 1 = 1
+      		   <if test="searchTxt != null and searchTxt != ''"> 
+					<choose>
+						<when test="searchGbn eq 0">
+							AND E.EMP_NO LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 1">
+							AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn eq 2">
+							AND A.STAD_YEAR_LIMT LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				<if test="searchGbn2 != null"> 
+					AND A.STAD_YEAR_LIMT LIKE '%' || #{searchGbn2} || '%'
+				</if>
+       		   ) S
+		WHERE S.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	<update id="anulProdUpdate" parameterType="hashmap">
+		UPDATE ANUL_PROD_MANG SET OCUR_ANUL = #{ocur_anul}
+		WHERE ANUL_PROD_NO = #{anul_prod_no}
+	</update>
+	<insert id="anulTest()" parameterType="hashmap">
+	INSERT INTO ANUL_PROD_MANG (ANUL_PROD_NO, EMP_NO, STAD_YEAR_LIMT, OCUR_ANUL)
+	SELECT ANUL_PROD_MANG_SEQ.NEXTVAL, H.EMP_NO, TO_CHAR(SYSDATE, 'YYYY'),
+	CASE WHEN TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 0
+	     THEN 0
+	     WHEN TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 1 OR
+	          TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 2
+	     THEN 15
+	     WHEN TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 3 OR
+	          TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 4
+	     THEN 16
+	     WHEN TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 5 OR
+	          TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 6
+	     THEN 17
+	     WHEN TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 7 OR
+	          TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 8
+	     THEN 18
+	     WHEN TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 9 OR
+	          TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 10
+	     THEN 19
+	     WHEN TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 11 OR
+	          TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 12
+	     THEN 20
+	     WHEN TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 13 OR
+	          TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 14
+	     THEN 21
+	     WHEN TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 15 OR
+	          TRUNC((MONTHS_BETWEEN(SYSDATE, H.START_DATE))/12) = 16
+	     THEN 22
+	     ELSE 22
+	 END AS OCUR_ANUL      
+	 FROM HR_ISUC H
+	 WHERE NOT EXISTS
+     ( SELECT * FROM HR_ISUC H INNER JOIN ANUL_PROD_MANG A
+                                       ON H.EMP_NO = A.EMP_NO
+       WHERE TO_CHAR(H.START_DATE, 'YYYY') = A.STAD_YEAR_LIMT
+      )
+     AND TO_CHAR(H.START_DATE, 'YYYY') &lt; TO_CHAR(SYSDATE, 'YYYY')
+	 OR TO_CHAR(H.START_DATE, 'YYYY') = TO_CHAR(SYSDATE, 'YYYY')
+	</insert>
+</mapper>

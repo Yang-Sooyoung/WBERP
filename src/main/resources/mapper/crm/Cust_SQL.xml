@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cust">
+	<!-- 고객 목록 -->
+	<select id="getCust" parameterType="hashmap" resultType="hashmap">
+		SELECT CUST_NO, NM, BIRTH, SEX_NM, CELL_NO, EMAIL,EMAILADDR, ADDR
+		FROM(SELECT CUST_NO, NM, TO_CHAR(BIRTH,'YYMMDD')AS BIRTH, SEX, CELL_NO, EMAIL,
+		EMAILADDR, ADDR,
+		ROW_NUMBER() OVER(ORDER BY NM ASC) AS RNUM,
+		DECODE(SEX, 0, '남성', 1, '여성') AS SEX_NM
+		FROM OTSD_CUST
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND CELL_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		)C
+		WHERE C.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+
+	<select id="getCustCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)AS CNT
+		FROM OTSD_CUST
+		WHERE 1 = 1
+		<if test="searchTxt != null and searchTxt != ''">
+			<choose>
+				<when test="searchGbn eq 0">
+					AND NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn eq 1">
+					AND CELL_NO LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+	</select>
+	<select id="getCustGroup" parameterType="hashmap" resultType="hashmap">
+		SELECT DISTINCT *
+		FROM(SELECT ROW_NUMBER() OVER(ORDER BY G.CUST_GROUP_FILT_NO DESC)AS RNUM,
+		G.CUST_GROUP_FILT_NM, G.CUST_JOIN_START_RANG,
+		CUST_GROUP_FILT_NO,
+		G.CUST_JOIN_END_RANG,G.AGE_MIN,G.AGE_MAX,G.AREA_NM, AREA_NO, G.SEX_NM
+		FROM(SELECT DISTINCT
+		F.CUST_GROUP_FILT_NO,
+		F.CUST_GROUP_FILT_NM,
+		TO_CHAR(F.CUST_JOIN_START_RANG,'YYYY-MM-DD')AS CUST_JOIN_START_RANG,
+		TO_CHAR(F.CUST_JOIN_END_RANG,'YYYY-MM-DD')AS
+		CUST_JOIN_END_RANG,
+		SEX, F.AGE_MIN,
+		F.AGE_MAX,R.AREA_NM,R.AREA_NO,
+		DECODE(SEX,0,'남성',1,'여성')AS
+		SEX_NM
+		FROM
+		CUST_GROUP_FILT F INNER JOIN
+		CUST_GROUP_FILT_AREA A
+		ON F.CUST_GROUP_FILT_NO = A.CUST_GROUP_FILT_NO AND DEL_WHET = 0
+		INNER JOIN AREA R
+		ON A.AREA_NO =
+		R.AREA_NO
+		INNER JOIN
+		CUST_GROUP_FILT_CHAN C
+		ON F.CUST_GROUP_FILT_NO = C.CUST_GROUP_FILT_NO
+		INNER JOIN CHAN_TYPE T
+		ON C.CHAN_TYPE_NO = T.CHAN_TYPE_NO
+		WHERE 1 = 1
+		<if test="groupnm != null and groupnm != ''">
+			AND CUST_GROUP_FILT_NM LIKE '%' || #{groupnm} || '%'
+		</if>
+		<if test="startdate != '' and enddate != ''">
+			AND CUST_JOIN_START_RANG &gt; = #{startdate}
+			AND CUST_JOIN_END_RANG &lt; = #{enddate}
+		</if>
+		<if test="minage != '' and maxage != ''">
+			AND AGE_MIN &gt; = #{minage}
+			AND AGE_MAX &lt; = #{maxage}
+		</if>
+		<if test="selectarea != -1">
+			AND R.AREA_NO = #{selectarea}
+		</if>
+		<if test="sex != null">
+			AND SEX = #{sex}
+		</if>
+		)G
+		ORDER BY CUST_GROUP_FILT_NO DESC
+		)M
+		WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+		ORDER BY M.RNUM ASC
+	</select>
+	<insert id="addCust" parameterType="hashmap">
+		INSERT INTO OTSD_CUST(CUST_NO, EMP_NO, NM, BIRTH, SEX,
+		TEL_NO, CELL_NO, EMAIL,EMAILADDR, POST_NO, ADDR, DETL_ADDR, MEMO)
+		VALUES (#{custnoseq}, #{sEmpNo}, #{custnm}, #{birth}, #{sex}, #{telno},
+		#{cellno}, #{email},#{emailaddr}, #{ENTP_ADDR1}, #{ENTP_ADDR2}, #{ENTP_ADDR3}, #{memo})
+	</insert>
+	<select id="custNoSeq" resultType="String">
+		SELECT CUST_NO_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	<insert id="addRecpAgre" parameterType="hashmap">
+		INSERT INTO RECP_AGRE(CUST_NO, CHAN_TYPE_NO)
+		VALUES (#{custnoseq}, #{channm})
+	</insert>
+	<insert id="addRecpAgre1" parameterType="hashmap">
+		INSERT INTO RECP_AGRE(CUST_NO, CHAN_TYPE_NO)
+		VALUES (#{custnoseq3}, #{channm1})
+	</insert>
+
+	<update id="updatecust" parameterType="hashmap">
+		UPDATE OTSD_CUST SET NM = #{custnm},
+		BIRTH = #{birth},
+		SEX = #{sex},
+		TEL_NO = #{telno},
+		CELL_NO = #{cellno},
+		EMAIL = #{email},
+		EMAILADDR = #{emailaddr},
+		POST_NO = #{ENTP_ADDR1},
+		MEMO = #{memo}
+		WHERE CUST_NO = #{custno}
+	</update>
+	<update id="updatechan" parameterType="hashmap">
+		DELETE FROM RECP_AGRE
+		WHERE CUST_NO = #{custno}
+	</update>
+
+	<select id="custDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT O.CUST_NO, NM, TO_CHAR(BIRTH,'YYYY-MM-DD')AS BIRTH, SEX, TEL_NO,CELL_NO,
+		EMAIL, EMAILADDR ,POST_NO, ADDR,DETL_ADDR,MEMO,
+		DECODE(SEX, 0, '남성', 1, '여성') AS SEX_NM
+		FROM OTSD_CUST O
+		WHERE O.CUST_NO = #{custno}
+	</select>
+	<select id="recpDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT *
+		FROM RECP_AGRE
+		WHERE CUST_NO = #{custno}
+	</select>
+	<delete id="custDelete" parameterType="hashmap">
+		DELETE FROM OTSD_CUST
+		WHERE CUST_NO = #{custno}
+	</delete>
+	<!-- 고객군추가 -->
+	<select id="getCustGroupCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM(SELECT DISTINCT *
+		FROM(SELECT *
+		FROM(SELECT DISTINCT F.CUST_GROUP_FILT_NO, F.CUST_GROUP_FILT_NM,
+		TO_CHAR(F.CUST_JOIN_START_RANG,'YYYY-MM-DD')AS CUST_JOIN_START_RANG,
+		TO_CHAR(F.CUST_JOIN_END_RANG,'YYYY-MM-DD')AS CUST_JOIN_END_RANG,
+		SEX, F.AGE_MIN,
+		F.AGE_MAX,R.AREA_NM,R.AREA_NO,
+		DECODE(SEX,0,'남성',1,'여성')AS
+		SEX_NM
+		FROM
+		CUST_GROUP_FILT F INNER JOIN CUST_GROUP_FILT_AREA A
+		ON F.CUST_GROUP_FILT_NO =
+		A.CUST_GROUP_FILT_NO AND DEL_WHET = 0
+		INNER JOIN AREA R
+		ON A.AREA_NO =
+		R.AREA_NO
+		INNER JOIN CUST_GROUP_FILT_CHAN C
+		ON F.CUST_GROUP_FILT_NO =
+		C.CUST_GROUP_FILT_NO
+		INNER JOIN CHAN_TYPE T
+		ON C.CHAN_TYPE_NO = T.CHAN_TYPE_NO
+		WHERE 1 = 1
+		<if test="groupnm != null and groupnm != ''">
+			AND CUST_GROUP_FILT_NM LIKE '%' || #{groupnm} || '%'
+		</if>
+		<if test="startdate != '' and enddate != ''">
+			AND CUST_JOIN_START_RANG &gt; = #{startdate}
+			AND CUST_JOIN_END_RANG &lt; = #{enddate}
+		</if>
+		<if test="minage != '' and maxage != ''">
+			AND AGE_MIN &gt; = #{minage}
+			AND AGE_MAX &lt; = #{maxage}
+		</if>
+		<if test="selectarea != -1">
+			AND R.AREA_NO = #{selectarea}
+		</if>
+		<if test="sex != null">
+			AND SEX = #{sex}
+		</if>
+		)))
+	</select>
+
+
+
+	<!-- 고객군추가 -->
+	<select id="getArea" parameterType="hashmap" resultType="hashmap">
+		SELECT AREA_NO,AREA_NM
+		FROM AREA
+	</select>
+	<select id="getChanNm" parameterType="hashmap" resultType="hashmap">
+		SELECT CHAN_TYPE_NO,CHAN_TYPE
+		FROM CHAN_TYPE
+	</select>
+	<insert id="custFlitAdd" parameterType="hashmap">
+		INSERT INTO
+		CUST_GROUP_FILT(CUST_GROUP_FILT_NO,CUST_GROUP_FILT_NM,CUST_JOIN_START_RANG,CUST_JOIN_END_RANG,SEX,AGE_MIN,AGE_MAX)
+		VALUES(#{custgroupseq},#{filtnm},#{startrang},#{endrang},#{sex},#{agemin},#{agemax})
+	</insert>
+	<insert id="custFlitAreaAdd" parameterType="hashmap">
+		INSERT INTO CUST_GROUP_FILT_AREA(CUST_GROUP_FILT_NO,AREA_NO)
+		VALUES(#{custgroupseq},#{areaSelect})
+	</insert>
+	<insert id="custFlitChanAdd" parameterType="hashmap">
+		INSERT INTO CUST_GROUP_FILT_CHAN(CUST_GROUP_FILT_NO,CHAN_TYPE_NO)
+		VALUES(#{custgroupseq},#{chanSelect})
+	</insert>
+	<insert id="custFlitChanAdd2" parameterType="hashmap">
+		INSERT INTO CUST_GROUP_FILT_CHAN(CUST_GROUP_FILT_NO,CHAN_TYPE_NO)
+		VALUES(#{custgroupseq2},#{chan2Select})
+	</insert>
+	<select id="custGroupSeq" resultType="String">
+		SELECT CUST_GROUP_FILT_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	<select id="custGroupDetail" parameterType="String" resultType="hashmap">
+		SELECT DISTINCT CUST_GROUP_FILT_NO,G.CUST_GROUP_FILT_NM,
+		G.CUST_JOIN_START_RANG,
+		CUST_GROUP_FILT_NO,
+		G.CUST_JOIN_END_RANG,G.AGE_MIN,G.AGE_MAX,G.AREA_NM, AREA_NO, SEX
+		FROM(SELECT
+		F.CUST_GROUP_FILT_NO,
+		F.CUST_GROUP_FILT_NM, C.CHAN_TYPE_NO,
+		TO_CHAR(F.CUST_JOIN_START_RANG,'YYYY-MM-DD')AS CUST_JOIN_START_RANG,
+		TO_CHAR(F.CUST_JOIN_END_RANG,'YYYY-MM-DD')AS CUST_JOIN_END_RANG,
+		F.AGE_MIN,
+		F.AGE_MAX,T.CHAN_TYPE,R.AREA_NM,R.AREA_NO,
+		ROW_NUMBER() OVER(ORDER BY
+		F.CUST_GROUP_FILT_NO DESC)AS RNUM,
+		SEX
+		FROM CUST_GROUP_FILT F INNER JOIN
+		CUST_GROUP_FILT_AREA A
+		ON F.CUST_GROUP_FILT_NO = A.CUST_GROUP_FILT_NO AND
+		DEL_WHET = 0
+		INNER JOIN AREA R
+		ON A.AREA_NO = R.AREA_NO
+		INNER JOIN
+		CUST_GROUP_FILT_CHAN C
+		ON F.CUST_GROUP_FILT_NO = C.CUST_GROUP_FILT_NO
+		INNER JOIN
+		CHAN_TYPE T
+		ON C.CHAN_TYPE_NO = T.CHAN_TYPE_NO
+		WHERE 1 = 1
+		)G
+		WHERE CUST_GROUP_FILT_NO =#{custgroupno}
+	</select>
+	<select id="getChanType" parameterType="hashmap" resultType="hashmap">
+		SELECT CGF.CUST_GROUP_FILT_NO,CY.CHAN_TYPE_NO,CY.CHAN_TYPE
+		FROM CUST_GROUP_FILT CGF
+		INNER JOIN CUST_GROUP_FILT_CHAN CGFC
+		ON CGF.CUST_GROUP_FILT_NO = CGFC.CUST_GROUP_FILT_NO
+		INNER JOIN CHAN_TYPE CY
+		ON CGFC.CHAN_TYPE_NO=CY.CHAN_TYPE_NO
+		WHERE CGF.CUST_GROUP_FILT_NO =#{custgroupno}
+	</select>
+
+
+	<!-- 고객군 수정 -->
+	<update id="custGroupUpdate" parameterType="hashmap">
+		UPDATE CUST_GROUP_FILT SET
+		CUST_GROUP_FILT_NM =#{filtnm2},
+		CUST_JOIN_START_RANG=#{startrang2},
+		CUST_JOIN_END_RANG=#{endrang2},
+		SEX=#{sex2},
+		AGE_MIN=#{agemin2},
+		AGE_MAX=#{agemax2}
+		WHERE CUST_GROUP_FILT_NO=#{custgroupno2}
+	</update>
+	<update id="custGroupAreaUpdate" parameterType="hashmap">
+		UPDATE CUST_GROUP_FILT_AREA SET
+		AREA_NO=#{area2Select}
+		WHERE CUST_GROUP_FILT_NO=#{custgroupno2}
+	</update>
+	<update id="custGroupChanUpdate" parameterType="hashmap">
+		DELETE FROM CUST_GROUP_FILT_CHAN
+		WHERE CUST_GROUP_FILT_NO = #{custgroupno2}
+	</update>
+
+	<!-- 고객군삭제 -->
+	<delete id="custGroupDelete" parameterType="hashmap">
+		UPDATE CUST_GROUP_FILT SET
+		DEL_WHET=1
+		WHERE CUST_GROUP_FILT_NO = #{custgroupno2}
+	</delete>
+	<delete id="custGroupAreaDelete" parameterType="hashmap">
+		DELETE FROM CUST_GROUP_FILT_AREA
+		WHERE CUST_GROUP_FILT_NO = #{custgroupno2}
+	</delete>
+	<delete id="custGroupChanDelete" parameterType="hashmap">
+		DELETE FROM CUST_GROUP_FILT_CHAN
+		WHERE CUST_GROUP_FILT_NO = #{custgroupno2}
+	</delete>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+

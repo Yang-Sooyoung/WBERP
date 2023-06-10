@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="aprv">
+
+	<select id="aprvNoSelect" resultType="String">
+		SELECT APPROVAL_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<select id="aprvModeNoSelect" resultType="String">
+		SELECT APPROVAL_MODE_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<select id="aprvFileNoSelect" resultType="String">
+		SELECT APRV_ATCH_FILE_SEQ.NEXTVAL
+		FROM DUAL
+	</select>
+	
+	<select id="getAprvModeCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM APPROVAL_MODE
+		WHERE APRV_MODE_DEL_WHET = 0
+	</select>
+	
+	<select id="getAprvModeList" parameterType="hashmap" resultType="hashmap">
+		SELECT B.APRV_MODE_NO, B.APRV_MODE_NM, B.APRV_MODE_EXPN, B.RNUM
+		FROM(SELECT APRV_MODE_NO, APRV_MODE_NM, APRV_MODE_EXPN, ROW_NUMBER() OVER(ORDER BY APRV_MODE_NO DESC) AS RNUM
+		FROM APPROVAL_MODE
+		WHERE APRV_MODE_DEL_WHET = 0) B
+		WHERE B.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getAprvMode" parameterType="hashmap" resultType="hashmap">
+		SELECT APRV_MODE_NO, APRV_MODE_NM, APRV_MODE_EXPN, APRV_MODE_MODE
+		FROM APPROVAL_MODE
+		WHERE APRV_MODE_NO = #{modeNo} AND APRV_MODE_DEL_WHET = 0
+	</select>
+	
+	<insert id="addAppMode" parameterType="hashmap">
+		INSERT INTO APPROVAL_MODE (APRV_MODE_NO, EMP_NO, APRV_MODE_NM, APRV_MODE_EXPN, APRV_MODE_MODE)
+		VALUES (#{aprvmodeno}, #{empno}, #{modetitle}, #{modeexpn}, #{modecont})
+	</insert>
+	
+	<update id="updateAprvMode" parameterType="hashmap">
+		UPDATE APPROVAL_MODE SET APRV_MODE_NM = #{modetitle},
+								 APRV_MODE_EXPN = #{modeexpn},
+								 APRV_MODE_MODE = #{modecont}
+		WHERE APRV_MODE_NO = ${modeNo}
+	</update>
+	
+	<update id="deleteAprvMode" parameterType="hashmap">
+		UPDATE APPROVAL_MODE SET APRV_MODE_DEL_WHET = 1
+		WHERE APRV_MODE_NO = ${modeNo}
+	</update>
+	
+	<insert id="addApp" parameterType="hashmap">
+		INSERT INTO APPROVAL (APRV_NO, EMP_NO, APRV_TYPE, APRV_TITLE, APRV_CONT)
+		VALUES (#{aprvno}, #{empno}, #{apptype}, #{apptitle}, #{appcont})
+	</insert>
+	
+	<insert id="addAppAthr" parameterType="hashmap">
+		INSERT INTO APPROVAL_ATHR (APRV_NO, EMP_NO)
+		VALUES (#{aprvno}, #{appathr})
+	</insert>
+	
+	<insert id="addAppRef" parameterType="hashmap">
+		INSERT INTO APPROVAL_REF (APRV_NO, EMP_NO)
+		VALUES (#{aprvno}, #{appref})
+	</insert>
+	
+	<insert id="addAppFile" parameterType="hashmap">
+		INSERT INTO APRV_ATCH_FILE(APRV_ATCH_FILE_NO, APRV_NO, APRV_ATCH_FILE_NM)
+		VALUES(#{aprvfileno}, #{aprvno}, #{docmatchfilenm})
+	</insert>
+	
+	<select id="getEmpCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM ( SELECT E.EMP_NO, E.EMP_NM, D.DEPT_NM, POSN_NM
+				FROM EMP E INNER JOIN HR_ISUC H
+				                   ON E.EMP_NO = H.EMP_NO
+				           INNER JOIN DEPT D
+				                   ON H.DEPT_NO = D.DEPT_NO
+				           INNER JOIN POSN P
+				                   ON H.POSN_NO = P.POSN_NO
+				WHERE 1=1
+				<if test="searchTxt != null and searchTxt != '' ">
+					<choose>
+						<when test="searchGbn == 0">
+							AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn==1">
+							AND E.EMP_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				ORDER BY E.EMP_NO) A
+	</select>
+	
+	<select id="getEmpList" parameterType="hashmap" resultType="hashmap">
+		SELECT EMP_NO, EMP_NM, DEPT_NM, POSN_NM, RNUM
+		FROM( SELECT E.EMP_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM,
+		        ROW_NUMBER() OVER(ORDER BY E.EMP_NO ASC) AS RNUM
+		        FROM EMP E INNER JOIN HR_ISUC H
+		                           ON E.EMP_NO = H.EMP_NO
+		                   INNER JOIN DEPT D
+		                           ON H.DEPT_NO = D.DEPT_NO
+		                   INNER JOIN POSN P
+		                           ON H.POSN_NO = P.POSN_NO
+		        WHERE 1=1
+		        <if test="searchTxt != null and searchTxt != '' ">
+					<choose>
+						<when test="searchGbn == 0">
+							AND D.DEPT_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="searchGbn==1">
+							AND E.EMP_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+		        ORDER BY E.EMP_NO)
+		WHERE RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getAppErcpCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(A.APRV_NO)
+		FROM(SELECT DISTINCT A.APRV_NO, E.EMP_NM
+     		 FROM APPROVAL_ATHR A LEFT OUTER JOIN APPROVAL_REF R
+                                       ON R.APRV_NO = A.APRV_NO INNER JOIN APPROVAL C
+                                       ON R.APRV_NO = C.APRV_NO OR A.APRV_NO = C.APRV_NO
+                                       INNER JOIN EMP E
+                                               ON C.EMP_NO = E.EMP_NO
+     	WHERE APRV_DEL_WHET = 0
+        <if test="searchTxt != null and searchTxt != '' ">
+			<choose>
+				<when test="searchGbn == 0">
+					AND APRV_TITLE LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn==1">
+					AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+        AND A.EMP_NO = #{empno} OR R.EMP_NO = #{empno}
+	    ORDER BY A.APRV_NO DESC
+        )A
+	</select>
+	
+	<select id="getAppErcpList" parameterType="hashmap" resultType="hashmap">
+		SELECT A.APRV_NO, A.EMP_NM, A.DEPT_NM, A.POSN_NM, A.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY
+		FROM(
+		SELECT A.APRV_NO, B.EMP_NM, B.DEPT_NM, B.POSN_NM, B.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY,
+		    ROW_NUMBER() OVER(ORDER BY A.APRV_NO DESC) AS RNUM
+				FROM (SELECT A.APRV_NO, A.APRV_ATHR_STAT, COUNT(*) AS TOTAL, COUNT(DECODE(APRV_ATHR_STAT,0,1)) AS REQ,
+				      COUNT(DECODE(APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(APRV_ATHR_STAT,2,1)) AS REPY
+				      FROM APPROVAL_ATHR A LEFT OUTER JOIN APPROVAL_REF R
+				                                        ON R.APRV_NO = A.APRV_NO
+				      WHERE A.EMP_NO = #{empno} OR R.EMP_NO = #{empno}
+				      GROUP BY A.APRV_NO, A.APRV_ATHR_STAT)A INNER JOIN (SELECT A.APRV_NO, E.EMP_NM,D.DEPT_NM, P.POSN_NM, A.APRV_TITLE
+		                                                                   FROM APPROVAL A INNER JOIN EMP E
+		                                                                   ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+		                                                                   ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+		                                                                   ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+		                                                                   ON H.POSN_NO = P.POSN_NO
+		                                                                   WHERE APRV_DEL_WHET = 0
+		                                                                   <if test="searchTxt != null and searchTxt != '' ">
+																				<choose>
+																					<when test="searchGbn == 0">
+																						AND APRV_TITLE LIKE '%' || #{searchTxt} || '%'
+																					</when>
+																					<when test="searchGbn==1">
+																						AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+																					</when>
+																				</choose>
+																			</if>) B
+		                                                             ON A.APRV_NO = B.APRV_NO)A
+		WHERE RNUM BETWEEN #{startCnt} AND #{endCnt}
+		ORDER BY APRV_NO DESC
+	</select>
+	
+	<select id="getAppErcpList_req" parameterType="hashmap" resultType="hashmap">
+	SELECT A.APRV_NO, A.EMP_NM, A.DEPT_NM, A.POSN_NM, A.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY
+	FROM(
+	SELECT A.APRV_NO, B.EMP_NM, B.DEPT_NM, B.POSN_NM, B.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY,
+	    ROW_NUMBER() OVER(ORDER BY A.APRV_NO DESC) AS RNUM
+			FROM (SELECT A.APRV_NO, A.APRV_ATHR_STAT, COUNT(*) AS TOTAL, COUNT(DECODE(APRV_ATHR_STAT,0,1)) AS REQ,
+			      COUNT(DECODE(APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(APRV_ATHR_STAT,2,1)) AS REPY
+			      FROM APPROVAL_ATHR A LEFT OUTER JOIN APPROVAL_REF R
+			                                        ON R.APRV_NO = A.APRV_NO
+			      WHERE A.EMP_NO = #{empno} OR R.EMP_NO = #{empno}
+			      GROUP BY A.APRV_NO, A.APRV_ATHR_STAT)A INNER JOIN (SELECT A.APRV_NO, E.EMP_NM,D.DEPT_NM, P.POSN_NM, A.APRV_TITLE
+	                                                                   FROM APPROVAL A INNER JOIN EMP E
+	                                                                   ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+	                                                                   ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+	                                                                   ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+	                                                                   ON H.POSN_NO = P.POSN_NO
+	                                                                   WHERE APRV_DEL_WHET = 0) B
+	                                                             ON A.APRV_NO = B.APRV_NO
+	                                                             WHERE APP + REPY != TOTAL)A
+		WHERE RNUM BETWEEN #{startCnt} AND #{endCnt}
+		ORDER BY APRV_NO DESC
+	</select>
+	
+	
+	<select id="getAppErcpList_ref" parameterType="hashmap" resultType="hashmap">
+	SELECT A.APRV_NO, A.EMP_NM, A.DEPT_NM, A.POSN_NM, A.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY
+	FROM(
+	SELECT A.APRV_NO, B.EMP_NM, B.DEPT_NM, B.POSN_NM, B.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY,
+	    ROW_NUMBER() OVER(ORDER BY A.APRV_NO DESC) AS RNUM
+			FROM (SELECT A.APRV_NO, A.APRV_ATHR_STAT, COUNT(*) AS TOTAL, COUNT(DECODE(APRV_ATHR_STAT,0,1)) AS REQ,
+			      COUNT(DECODE(APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(APRV_ATHR_STAT,2,1)) AS REPY
+			      FROM APPROVAL_ATHR A LEFT OUTER JOIN APPROVAL_REF R
+			                                        ON R.APRV_NO = A.APRV_NO
+			      WHERE A.EMP_NO = #{empno} OR R.EMP_NO = #{empno}
+			      GROUP BY A.APRV_NO, A.APRV_ATHR_STAT)A INNER JOIN (SELECT A.APRV_NO, E.EMP_NM,D.DEPT_NM, P.POSN_NM, A.APRV_TITLE
+	                                                                   FROM APPROVAL A INNER JOIN EMP E
+	                                                                   ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+	                                                                   ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+	                                                                   ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+	                                                                   ON H.POSN_NO = P.POSN_NO
+	                                                                   WHERE APRV_DEL_WHET = 0) B
+	                                                             ON A.APRV_NO = B.APRV_NO
+	                                                             WHERE REPY > 0)A
+		WHERE RNUM BETWEEN #{startCnt} AND #{endCnt}
+		ORDER BY APRV_NO DESC
+	</select>
+	
+	
+	<select id="getAppErcpList_adm" parameterType="hashmap" resultType="hashmap">
+	SELECT A.APRV_NO, A.EMP_NM, A.DEPT_NM, A.POSN_NM, A.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY
+	FROM(
+	SELECT A.APRV_NO, B.EMP_NM, B.DEPT_NM, B.POSN_NM, B.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY,
+	    ROW_NUMBER() OVER(ORDER BY A.APRV_NO DESC) AS RNUM
+			FROM (SELECT A.APRV_NO, A.APRV_ATHR_STAT, COUNT(*) AS TOTAL, COUNT(DECODE(APRV_ATHR_STAT,0,1)) AS REQ,
+			      COUNT(DECODE(APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(APRV_ATHR_STAT,2,1)) AS REPY
+			      FROM APPROVAL_ATHR A LEFT OUTER JOIN APPROVAL_REF R
+			                                        ON R.APRV_NO = A.APRV_NO
+			      WHERE A.EMP_NO = #{empno} OR R.EMP_NO = #{empno}
+			      GROUP BY A.APRV_NO, A.APRV_ATHR_STAT)A INNER JOIN (SELECT A.APRV_NO, E.EMP_NM,D.DEPT_NM, P.POSN_NM, A.APRV_TITLE
+	                                                                   FROM APPROVAL A INNER JOIN EMP E
+	                                                                   ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+	                                                                   ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+	                                                                   ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+	                                                                   ON H.POSN_NO = P.POSN_NO
+	                                                                   WHERE APRV_DEL_WHET = 0) B
+	                                                             ON A.APRV_NO = B.APRV_NO
+	                                                             WHERE TOTAL = APP)A
+		WHERE RNUM BETWEEN #{startCnt} AND #{endCnt}
+		ORDER BY APRV_NO DESC
+	</select>
+	
+	<select id="getAppErcpCnt_req" parameterType="hashmap" resultType="Integer">
+	SELECT COUNT(A.APRV_NO)
+		FROM(SELECT A.APRV_NO, A.EMP_NM, A.DEPT_NM, A.POSN_NM, A.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY
+			 FROM(SELECT A.APRV_NO, B.EMP_NM, B.DEPT_NM, B.POSN_NM, B.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY,
+				    ROW_NUMBER() OVER(ORDER BY A.APRV_NO DESC) AS RNUM
+						FROM (SELECT A.APRV_NO, A.APRV_ATHR_STAT, COUNT(*) AS TOTAL, COUNT(DECODE(APRV_ATHR_STAT,0,1)) AS REQ,
+						      COUNT(DECODE(APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(APRV_ATHR_STAT,2,1)) AS REPY
+						      FROM APPROVAL_ATHR A LEFT OUTER JOIN APPROVAL_REF R
+						                                        ON R.APRV_NO = A.APRV_NO
+						      WHERE A.EMP_NO = #{empno} OR R.EMP_NO = #{empno}
+						      GROUP BY A.APRV_NO, A.APRV_ATHR_STAT)A INNER JOIN (SELECT A.APRV_NO, E.EMP_NM,D.DEPT_NM, P.POSN_NM, A.APRV_TITLE
+				                                                                   FROM APPROVAL A INNER JOIN EMP E
+				                                                                   ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+				                                                                   ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+				                                                                   ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+				                                                                   ON H.POSN_NO = P.POSN_NO
+				                                                                   WHERE APRV_DEL_WHET = 0) B
+				                                                             ON A.APRV_NO = B.APRV_NO)A
+						WHERE APP + REPY != TOTAL
+						ORDER BY APRV_NO DESC
+				        )A
+	</select>
+	
+	
+	<select id="getAppErcpCnt_ref" parameterType="hashmap" resultType="Integer">
+	SELECT COUNT(A.APRV_NO)
+		FROM(SELECT A.APRV_NO, A.EMP_NM, A.DEPT_NM, A.POSN_NM, A.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY
+        FROM(SELECT A.APRV_NO, B.EMP_NM, B.DEPT_NM, B.POSN_NM, B.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY,
+            ROW_NUMBER() OVER(ORDER BY A.APRV_NO DESC) AS RNUM
+                FROM (SELECT A.APRV_NO, A.APRV_ATHR_STAT, COUNT(*) AS TOTAL, COUNT(DECODE(APRV_ATHR_STAT,0,1)) AS REQ,
+                      COUNT(DECODE(APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(APRV_ATHR_STAT,2,1)) AS REPY
+                      FROM APPROVAL_ATHR A LEFT OUTER JOIN APPROVAL_REF R
+                                                        ON R.APRV_NO = A.APRV_NO
+                      WHERE A.EMP_NO = #{empno} OR R.EMP_NO = #{empno}
+                      GROUP BY A.APRV_NO, A.APRV_ATHR_STAT)A INNER JOIN (SELECT A.APRV_NO, E.EMP_NM,D.DEPT_NM, P.POSN_NM, A.APRV_TITLE
+                                                                           FROM APPROVAL A INNER JOIN EMP E
+                                                                           ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+                                                                           ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+                                                                           ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+                                                                           ON H.POSN_NO = P.POSN_NO
+                                                                           WHERE APRV_DEL_WHET = 0) B
+                                                                     ON A.APRV_NO = B.APRV_NO)A
+                WHERE REPY > 0
+                ORDER BY APRV_NO DESC
+        )A
+	</select>
+	
+	
+	<select id="getAppErcpCnt_adm" parameterType="hashmap" resultType="Integer">
+	SELECT COUNT(A.APRV_NO)
+		FROM(SELECT A.APRV_NO, A.EMP_NM, A.DEPT_NM, A.POSN_NM, A.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY
+        FROM(SELECT A.APRV_NO, B.EMP_NM, B.DEPT_NM, B.POSN_NM, B.APRV_TITLE, A.TOTAL, A.REQ, A.APP, A.REPY,
+            ROW_NUMBER() OVER(ORDER BY A.APRV_NO DESC) AS RNUM
+                FROM (SELECT A.APRV_NO, A.APRV_ATHR_STAT, COUNT(*) AS TOTAL, COUNT(DECODE(APRV_ATHR_STAT,0,1)) AS REQ,
+                      COUNT(DECODE(APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(APRV_ATHR_STAT,2,1)) AS REPY
+                      FROM APPROVAL_ATHR A LEFT OUTER JOIN APPROVAL_REF R
+                                                        ON R.APRV_NO = A.APRV_NO
+                      WHERE A.EMP_NO = #{empno} OR R.EMP_NO = #{empno}
+                      GROUP BY A.APRV_NO, A.APRV_ATHR_STAT)A INNER JOIN (SELECT A.APRV_NO, E.EMP_NM,D.DEPT_NM, P.POSN_NM, A.APRV_TITLE
+                                                                           FROM APPROVAL A INNER JOIN EMP E
+                                                                           ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+                                                                           ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+                                                                           ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+                                                                           ON H.POSN_NO = P.POSN_NO
+                                                                           WHERE APRV_DEL_WHET = 0) B
+                                                                     ON A.APRV_NO = B.APRV_NO)A
+                WHERE TOTAL = APP
+                ORDER BY APRV_NO DESC
+        )A
+	</select>
+	
+	<select id="getApp" parameterType="hashmap" resultType="hashmap">
+		SELECT A.APRV_NO, APRV_TITLE, APRV_CONT, E.EMP_NM AS REFNM, D.DEPT_NM AS REFDP, P.POSN_NM AS REFPS, APRV_ETCNO, APRV_TYPE,
+		E1.EMP_NM AS SUBNM, D1.DEPT_NM AS SUBDP, P1.POSN_NM AS SUBPS
+		FROM APPROVAL A LEFT OUTER JOIN APPROVAL_REF R
+		                        ON A.APRV_NO = R.APRV_NO LEFT OUTER JOIN EMP E
+		                        ON R.EMP_NO = E.EMP_NO LEFT OUTER JOIN HR_ISUC H
+		                        ON E.EMP_NO = H.EMP_NO LEFT OUTER JOIN DEPT D
+		                        ON H.DEPT_NO = D.DEPT_NO LEFT OUTER JOIN POSN P
+		                        ON H.POSN_NO = P.POSN_NO INNER JOIN EMP E1
+                                ON A.EMP_NO = E1.EMP_NO  INNER JOIN HR_ISUC H1
+		                        ON E1.EMP_NO = H1.EMP_NO INNER JOIN DEPT D1
+		                        ON H1.DEPT_NO = D1.DEPT_NO INNER JOIN POSN P1
+		                        ON H1.POSN_NO = P1.POSN_NO
+		WHERE A.APRV_NO = #{aprvno}
+	</select>
+	
+	<select id="getAppFile" parameterType="hashmap" resultType="hashmap">
+		SELECT APRV_ATCH_FILE_NM
+		FROM APRV_ATCH_FILE
+		WHERE APRV_NO = #{aprvno}
+	</select>
+	
+	<select id="getAppStat" parameterType="hashmap" resultType="hashmap">
+		SELECT COUNT(*) AS TOTAL, COUNT(DECODE(APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(APRV_ATHR_STAT,2,1)) AS REPY
+		FROM APPROVAL_ATHR
+		WHERE APRV_NO = #{aprvno}
+	</select>
+	
+	<update id="aprvSuc" parameterType="hashmap">
+		UPDATE APPROVAL_ATHR SET APRV_ATHR_STAT = 1
+		WHERE APRV_NO = #{aprvno} AND EMP_NO = #{empno}
+	</update>
+	
+	<update id="aprvRepy" parameterType="hashmap">
+		UPDATE APPROVAL_ATHR SET APRV_ATHR_STAT = 2,
+                         		 APRV_ATHR_RESN = #{repycont}
+		WHERE APRV_NO = #{aprvno} AND EMP_NO = #{empno}
+	</update>
+	
+	<select id="getAppSendCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*)
+		FROM APPROVAL
+		WHERE APRV_DEL_WHET = 0
+        <if test="searchTxt != null and searchTxt != '' ">
+			<choose>
+				<when test="searchGbn == 0">
+					AND APRV_TITLE LIKE '%' || #{searchTxt} || '%'
+				</when>
+				<when test="searchGbn==1">
+					AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+				</when>
+			</choose>
+		</if>
+		AND EMP_NO = #{empno}
+	</select>
+	
+	<select id="getAppSendList" parameterType="hashmap" resultType="hashmap">
+		SELECT *
+		FROM(SELECT A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE, TOTAL, APP, REPY,
+			 ROW_NUMBER() OVER(ORDER BY A.APRV_NO DESC) AS RNUM
+			 FROM APPROVAL A INNER JOIN APPROVAL_ATHR AT
+			                        ON A.APRV_NO = AT.APRV_NO INNER JOIN EMP E
+			                        ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+			                        ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+			                        ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+			                        ON H.POSN_NO = P.POSN_NO INNER JOIN (SELECT A.APRV_NO, COUNT(AT.APRV_NO) AS TOTAL,
+	                                                                    COUNT(DECODE(AT.APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(AT.APRV_ATHR_STAT,2,1)) AS REPY
+	                                                                    FROM APPROVAL A INNER JOIN APPROVAL_ATHR AT
+	                                                                    ON A.APRV_NO = AT.APRV_NO
+	                                                                    GROUP BY A.APRV_NO) B
+	                                                                 ON A.APRV_NO = B.APRV_NO
+																			WHERE A.APRV_DEL_WHET = 0
+																			<if test="searchTxt != null and searchTxt != '' ">
+																				<choose>
+																					<when test="searchGbn == 0">
+																						AND APRV_TITLE LIKE '%' || #{searchTxt} || '%'
+																					</when>
+																					<when test="searchGbn==1">
+																						AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+																					</when>
+																				</choose>
+																			</if>
+																			AND A.EMP_NO = #{empno}
+																			GROUP BY A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE, TOTAL, APP, REPY
+																			ORDER BY A.APRV_NO DESC)
+		WHERE RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getAppSendCnt_ing" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) FROM
+		(SELECT APRV_NO, EMP_NM, DEPT_NM, POSN_NM, APRV_TITLE, TOTAL, APP, REPY
+		FROM( SELECT A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE, COUNT(AT.APRV_ATHR_STAT) AS TOTAL,
+		    COUNT(DECODE(AT.APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(AT.APRV_ATHR_STAT,2,1)) AS REPY
+		    FROM APPROVAL A INNER JOIN APPROVAL_ATHR AT
+		                            ON A.APRV_NO = AT.APRV_NO INNER JOIN EMP E
+		                            ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+		                            ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+		                            ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+		                            ON H.POSN_NO = P.POSN_NO
+		    WHERE A.APRV_DEL_WHET = 0 AND A.EMP_NO = #{empno}
+		    GROUP BY A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE)
+		WHERE APP + REPY != TOTAL)
+		
+	</select>
+	
+	<select id="getAppSendList_ing" parameterType="hashmap" resultType="hashmap">
+		SELECT *
+		FROM (SELECT APRV_NO, EMP_NM, DEPT_NM, POSN_NM, APRV_TITLE, TOTAL, APP, REPY, ROW_NUMBER() OVER(ORDER BY APRV_NO DESC) AS RNUM 
+				FROM( SELECT A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE, COUNT(AT.APRV_ATHR_STAT) AS TOTAL,
+				    COUNT(DECODE(AT.APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(AT.APRV_ATHR_STAT,2,1)) AS REPY		    
+				    FROM APPROVAL A INNER JOIN APPROVAL_ATHR AT
+				                            ON A.APRV_NO = AT.APRV_NO INNER JOIN EMP E
+				                            ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+				                            ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+				                            ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+				                            ON H.POSN_NO = P.POSN_NO
+				    WHERE A.APRV_DEL_WHET = 0 AND A.EMP_NO = #{empno}
+				    GROUP BY A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE)
+				WHERE APP + REPY != TOTAL
+				AND REPY = 0
+				ORDER BY APRV_NO DESC)
+		WHERE RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getAppSendCnt_end" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) FROM
+		(SELECT APRV_NO, EMP_NM, DEPT_NM, POSN_NM, APRV_TITLE, TOTAL, APP, REPY
+		FROM( SELECT A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE, COUNT(AT.APRV_ATHR_STAT) AS TOTAL,
+		    COUNT(DECODE(AT.APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(AT.APRV_ATHR_STAT,2,1)) AS REPY
+		    FROM APPROVAL A INNER JOIN APPROVAL_ATHR AT
+		                            ON A.APRV_NO = AT.APRV_NO INNER JOIN EMP E
+		                            ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+		                            ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+		                            ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+		                            ON H.POSN_NO = P.POSN_NO
+		    WHERE A.APRV_DEL_WHET = 0 AND A.EMP_NO = #{empno}
+		    GROUP BY A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE)
+		WHERE REPY > 0 OR APP = TOTAL)
+	</select>
+	
+	<select id="getAppSendList_end" parameterType="hashmap" resultType="hashmap">
+		SELECT *
+		FROM ( SELECT APRV_NO, EMP_NM, DEPT_NM, POSN_NM, APRV_TITLE, TOTAL, APP, REPY, ROW_NUMBER() OVER(ORDER BY APRV_NO DESC) AS RNUM
+				FROM( SELECT A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE, COUNT(AT.APRV_ATHR_STAT) AS TOTAL,
+				    COUNT(DECODE(AT.APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(AT.APRV_ATHR_STAT,2,1)) AS REPY
+				    FROM APPROVAL A INNER JOIN APPROVAL_ATHR AT
+				                            ON A.APRV_NO = AT.APRV_NO INNER JOIN EMP E
+				                            ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+				                            ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+				                            ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+				                            ON H.POSN_NO = P.POSN_NO
+				    WHERE A.APRV_DEL_WHET = 0 AND A.EMP_NO = #{empno}
+				    GROUP BY A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE)
+				WHERE REPY > 0 OR APP = TOTAL
+				ORDER BY APRV_NO DESC)
+		WHERE RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id="getAppResn" parameterType="hashmap" resultType="hashmap">
+		SELECT AA.APRV_ATHR_STAT, AA.APRV_ATHR_RESN, E.EMP_NM, D.DEPT_NM, P.POSN_NM
+		FROM APPROVAL A INNER JOIN APPROVAL_ATHR AA
+		                        ON A.APRV_NO = AA.APRV_NO INNER JOIN EMP E
+		                        ON AA.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+				                ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+				                ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+				                ON H.POSN_NO = P.POSN_NO
+		WHERE A.APRV_NO = #{aprvno} AND AA.APRV_ATHR_STAT = 2
+	</select>
+	
+	<insert id="PublicAddApp" parameterType="hashmap">
+		INSERT INTO APPROVAL (APRV_NO, EMP_NO, APRV_TYPE, APRV_TITLE, APRV_CONT, APRV_ETCNO)
+		VALUES (#{aprvno}, #{empno}, #{type}, #{apptitle}, #{cont}, #{gbnNo})
+	</insert>
+	
+	<select id="returnPublicApp" parameterType="hashmap" resultType="hashmap">
+		SELECT CASE WHEN REPY > 0 THEN '반려'
+					 WHEN TOTAL = APP THEN '승인'
+					 ELSE '요청'
+				     END AS TYPE
+		FROM (SELECT A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE, TOTAL, APP, REPY
+					 FROM APPROVAL A INNER JOIN APPROVAL_ATHR AT
+					                        ON A.APRV_NO = AT.APRV_NO INNER JOIN EMP E
+					                        ON A.EMP_NO = E.EMP_NO INNER JOIN HR_ISUC H
+					                        ON E.EMP_NO = H.EMP_NO INNER JOIN DEPT D
+					                        ON H.DEPT_NO = D.DEPT_NO INNER JOIN POSN P
+					                        ON H.POSN_NO = P.POSN_NO INNER JOIN (SELECT A.APRV_NO, COUNT(AT.APRV_NO) AS TOTAL,
+			                                                                    COUNT(DECODE(AT.APRV_ATHR_STAT,1,1)) AS APP, COUNT(DECODE(AT.APRV_ATHR_STAT,2,1)) AS REPY
+			                                                                    FROM APPROVAL A INNER JOIN APPROVAL_ATHR AT
+			                                                                    ON A.APRV_NO = AT.APRV_NO
+			                                                                    GROUP BY A.APRV_NO) B
+			                                                                 ON A.APRV_NO = B.APRV_NO
+					WHERE A.APRV_DEL_WHET = 0
+		            AND A.APRV_ETCNO = #{gbnNo}
+					GROUP BY A.APRV_NO, E.EMP_NM, D.DEPT_NM, P.POSN_NM, A.APRV_TITLE, TOTAL, APP, REPY
+					ORDER BY A.APRV_NO DESC)
+	</select>
+	
+	<update id="campAprvSuc" parameterType="hashmap">
+		UPDATE CAMP SET STAT_CODE = 3
+		WHERE CAMP_NO = #{APRV_ETCNO}
+	</update>
+	
+	<update id="anulUseAprvSuc" parameterType="hashmap">
+		UPDATE ANUL_USE_MANG SET APRV_STAT = 1
+		WHERE ANUL_USE_NO = #{APRV_ETCNO}
+	</update>
+	
+	<update id="campAprvRepy" parameterType="hashmap">
+		UPDATE CAMP SET STAT_CODE = 2
+		WHERE CAMP_NO = #{APRV_ETCNO}
+	</update>
+	
+	<update id="anulUseAprvRepy" parameterType="hashmap">
+		UPDATE ANUL_USE_MANG SET APRV_STAT = 2
+		WHERE ANUL_USE_NO = #{APRV_ETCNO}
+	</update>
+	
+	<insert id="addNotice" parameterType="hashmap">
+		INSERT INTO NOTICE (NOTC_NO, EMP_NO, NOTC_SORT, NOTC_CONT)
+		VALUES(NOTICE_SEQ.NEXTVAL, #{appathr}, 1, #{apptitle})
+	</insert>
+	
+</mapper>

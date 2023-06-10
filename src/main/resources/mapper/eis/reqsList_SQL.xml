@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="reqsList">
+	<select id="getreqsList" parameterType="hashmap" resultType="hashmap">
+		SELECT REQS_NO
+				, REQS_TITLE
+				, EMP_NM
+				, REQS_DATE
+				, PROC_CODE
+		FROM
+		(
+			SELECT REQS_NO
+					, REQS_TITLE
+					, EMP_NM
+					, TO_CHAR(REQS_DATE, 'YYYY-MM-DD') AS REQS_DATE
+					, DECODE(PROC_CODE, 0, '요청', 1, '처리완료', 2, '거부', 4, '처리중') AS PROC_CODE
+					, EIS_CATG_NO
+					, REFS_RESN
+					, ROW_NUMBER()OVER(ORDER BY REQS_NO DESC) AS RNUM
+			FROM REQS_LIST R INNER JOIN EMP E
+            ON R.EMP_NO = E.EMP_NO
+            WHERE DEL_WHET = 0
+            <if test="request_filter != null and request_filter != ''">
+            	AND PROC_CODE = #{request_filter}
+            </if>
+			<if test="searchTxt != null and searchTxt != ''">
+				<choose>
+					<when test="search_filter eq 0">
+						AND REQS_TITLE LIKE '%' || #{searchTxt} || '%'
+					</when>
+					<when test="search_filter eq 1">
+						AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+					</when>
+				</choose>
+			</if>
+			) M
+			WHERE M.RNUM BETWEEN #{startCnt} AND #{endCnt}
+	</select>
+	
+	<select id = "getreqsCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+			 FROM REQS_LIST R INNER JOIN EMP E
+		                       		  ON R.EMP_NO = E.EMP_NO
+			 WHERE 1 = 1
+				<if test="searchTxt != null and searchTxt != ''">
+					<choose>
+						<when test="search_filter eq 0">
+							AND REQS_TITLE LIKE '%' || #{searchTxt} || '%'
+						</when>
+						<when test="search_filter eq 1">
+							AND EMP_NM LIKE '%' || #{searchTxt} || '%'
+						</when>
+					</choose>
+				</if>
+				<if test="request_filter != null and request_filter != ''">
+					<choose>
+						<when test="request_filter eq 0">
+							AND PROC_CODE = 0
+						</when>
+						<when test="request_filter eq 4">
+							AND PROC_CODE = 4
+						</when>
+						<when test="request_filter eq 1">
+							AND PROC_CODE = 1
+						</when>
+						<when test="request_filter eq 2">
+							AND PROC_CODE = 2
+						</when>
+					</choose>
+				</if>
+	</select>
+	
+	<select id = "getreqsDetail" parameterType="hashmap" resultType="hashmap">
+		SELECT R.REQS_NO, REQS_TITLE, EMP_NM, EIS_CATG_NM, REQS_CONT,
+				DECODE(PROC_CODE, 0, '요청', 1, '처리완료', 2, '거부', 4, '처리중') AS PROC_CODE, REFS_RESN, R.EIS_CATG_NO
+		FROM REQS_LIST R INNER JOIN EMP E
+          		                 ON R.EMP_NO = E.EMP_NO
+                 		 INNER JOIN EIS_CATEGORY C
+                         		 ON R.EIS_CATG_NO = C.EIS_CATG_NO
+        WHERE R.REQS_NO = #{reqsNo} 
+	</select>
+	
+	<insert id = "reqsAdd" parameterType="hashmap">
+		INSERT INTO REQS_LIST(REQS_NO, EMP_NO, EIS_CATG_NO, REQS_TITLE, REQS_CONT)
+		VALUES(REQS_LIST_SEQ.NEXTVAL, #{sEmpNo}, #{eisCatgNo}, #{request_title_text}, #{request_contents_text})
+	</insert>
+	
+	<update id = "reqsUpdate" parameterType="hashmap">
+		UPDATE REQS_LIST SET REQS_TITLE = #{request_title_text},
+							 EIS_CATG_NO = #{eisCatgNo},
+                    		 REQS_CONT = #{request_contents_text}
+		WHERE REQS_NO = #{reqsNo}
+	</update>
+	
+	<update id = "reqsDelete" parameterType="hashmap">
+		UPDATE REQS_LIST SET DEL_WHET = 1
+		WHERE REQS_NO = #{reqsNo}
+	</update>
+	
+	<update id = "proc4Update" parameterType="hashmap">
+		UPDATE REQS_LIST SET PROC_CODE = 4
+		WHERE REQS_NO = #{reqsNo}
+	</update>
+	
+	<update id = "proc1Update" parameterType="hashmap">
+		UPDATE REQS_LIST SET PROC_CODE = 1
+		WHERE REQS_NO = #{reqsNo}
+	</update>
+	
+	<update id = "proc2Update" parameterType="hashmap">
+		UPDATE REQS_LIST SET PROC_CODE = 2
+		WHERE REQS_NO = #{reqsNo}
+	</update>
+	
+	<update id = "refsAdd" parameterType="hashmap">
+		UPDATE REQS_LIST SET REFS_RESN = #{refs_resn}
+		WHERE REQS_NO = #{reqsNo}
+	</update>
+	
+	<select id = "getreqsComtCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM REQS_COMT RC INNER JOIN REQS_LIST RL
+		                          ON RC.REQS_NO = RL.REQS_NO
+		WHERE RC.REQS_NO = #{reqsNo}
+	</select>
+	
+	<select id = "getreqsComt" parameterType="hashmap" resultType="hashmap">
+		SELECT COMT_NO, EMP_NO, A.EMP_NM, A.REQS_NO, A.REQS_TITLE, A.REQS_CONT, A.COMT_CONT, A.WRITE_DATE
+		FROM(SELECT COMT_NO, RC.EMP_NO, E.EMP_NM, R.REQS_NO, R.REQS_TITLE, R.REQS_CONT, COMT_CONT,
+					TO_CHAR(WRITE_DATE, 'YYYY-MM-DD') AS WRITE_DATE,
+					ROW_NUMBER()OVER(ORDER BY COMT_NO DESC) AS RCNUM
+			 FROM REQS_COMT RC INNER JOIN REQS_LIST R
+				                       ON RC.REQS_NO = R.REQS_NO
+				               INNER JOIN EMP E
+				                       ON RC.EMP_NO = E.EMP_NO
+			 WHERE RC.REQS_NO = #{reqsNo}) A
+		WHERE A.RCNUM BETWEEN #{cStartCnt} AND #{cEndCnt}
+	</select>
+	
+	<insert id = "comtAdd" parameterType="hashmap">
+		INSERT INTO REQS_COMT(COMT_NO, EMP_NO, REQS_NO, COMT_CONT)
+		VALUES(REQS_COMT_SEQ.NEXTVAL, #{sEmpNo}, #{reqsNo}, #{comt_txt})
+	</insert>
+	
+	<delete id = "comtDelete" parameterType="hashmap">
+		DELETE FROM REQS_COMT
+		WHERE COMT_NO = #{comtNo}
+	</delete>
+	
+	<update id = "comtUpdate" parameterType="hashmap">
+		UPDATE REQS_COMT SET COMT_CONT = #{comt_txt}
+		WHERE COMT_NO = #{comtNo}
+	</update> 
+	
+	<select id = "getcatgList" parameterType="hashmap" resultType="hashmap">
+		SELECT EIS_CATG_NO, EIS_CATG_NM
+		FROM EIS_CATEGORY
+		WHERE DEL_WHET = 0
+		ORDER BY EIS_CATG_NO ASC
+	</select>
+	
+	<select id = "getcatgCnt" parameterType="hashmap" resultType="Integer">
+		SELECT COUNT(*) AS CNT
+		FROM EIS_CATEGORY
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
