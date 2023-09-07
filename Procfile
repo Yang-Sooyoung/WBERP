@@ -1,1 +1,1 @@
-web: java -jar target/java-getting-started-1.0.jar
+web: web: java -jar target/wberp-1.0.0.jar
