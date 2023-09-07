@@ -1,2 +1,2 @@
-web: java -jar target/ibk.war
+web: java -Xmx512m -XX:MaxPermSize=256m -jar target/ibk.war
 
