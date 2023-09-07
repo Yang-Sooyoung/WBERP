@@ -191,7 +191,7 @@
 		    <artifactId>ojdbc6</artifactId>
 		    <version>11.2.0.3</version>
 		    <scope>system</scope>
-		    <systemPath>${basedir}/lib/ojdbc6-11.2.0.3.jar</systemPath>
+		    <systemPath>${basedir}/src/main/webapp/WEB-INF/lib/ojdbc6-11.2.0.3.jar</systemPath>
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/sqljdbc4 -->
@@ -200,7 +200,7 @@
 		    <artifactId>sqljdbc4</artifactId>
 		    <version>4.2.jar</version>
 		    <scope>system</scope>
-		    <systemPath>${basedir}/lib/sqljdbc4-4.2.jar</systemPath>
+		    <systemPath>${basedir}/src/main/webapp/WEB-INF/lib/sqljdbc4-4.2.jar</systemPath>
 		</dependency>
 		<!-- jackson -->
 		<dependency>
