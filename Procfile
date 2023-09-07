@@ -1,1 +1,1 @@
-web: java -jar target/wberp-1.0.0.jar
+web: java -Dserver.port=$PORT -Dspring.profiles.active=production $JAVA_OPTS -jar "target/ibk.war"
