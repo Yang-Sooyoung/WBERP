@@ -1,1 +1,1 @@
-web: java -Dserver.port=$PORT -Dspring.profiles.active=production $JAVA_OPTS -jar "target/ibk.war"
+web: java -Dserver.port=$PORT -Dspring.profiles.active=production $JAVA_OPTS -war "target/ibk.war"
