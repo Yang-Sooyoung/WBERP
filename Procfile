@@ -1,2 +1,2 @@
-web: java -Xmx512m -XX:MaxPermSize=256m -jar target/ibk.jar
+web: java -Xmx512m -XX:MaxPermSize=256m -jar build/libs/ibk.jar
 
