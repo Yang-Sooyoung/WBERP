@@ -1,1 +1,3 @@
-web: java -Dserver.port=$PORT -Dspring.profiles.active=production $JAVA_OPTS -war "target/ibk.war"
+web: for DIR in ".m2" ".maven" ; do
+cp -r $CACHE_DIR/$DIR $BUILD_DIR/$DIR
+done
