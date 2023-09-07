@@ -1,1 +1,1 @@
- web: java -Xmx512m -XX:MaxPermSize=256m
+web: java -Dfile.encoding=UTF-8 -jar your-application.jar
