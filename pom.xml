@@ -193,12 +193,11 @@
 		    <scope>system</scope>
 		</dependency>
 		
+		<!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/sqljdbc4 -->
 		<dependency>
-		    <groupId>com.microsoft</groupId>
-		    <artifactId>MSSQLDriver</artifactId>
-		    <version>1.5.0</version>
-		    <scope>system</scope>
-		    <systemPath>${basedir}/src/main/webapp/WEB-INF/lib/sqljdbc4.jar</systemPath>
+		    <groupId>com.microsoft.sqlserver</groupId>
+		    <artifactId>sqljdbc4</artifactId>
+		    <version>4.2.jar</version>
 		</dependency>
 		<!-- jackson -->
 		<dependency>
