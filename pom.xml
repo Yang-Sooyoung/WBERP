@@ -272,7 +272,7 @@
             <artifactId>spring-boot-maven-plugin</artifactId>
 	    <version>2.5.4</version>
 		<configuration>
-			<mainClass>com.wberp.ibk.CommonController</mainClass>
+			<mainClass>com.wberp.ibk.web.common.controller.CommonController</mainClass>
 		</configuration>
 		    <executions>
 			<execution>
