@@ -271,10 +271,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-maven-plugin</artifactId>
 	    <version>2.5.4</version>
-                <configuration>
-			<mainClass>${basedir}/src/main/java/com/wberp/ibk/web/common/controller/CommonController</mainClass>
-		    </configuration>
-		
 		    <executions>
 			<execution>
 			    <goals>
