@@ -21,6 +21,7 @@ import com.wberp.ibk.web.common.service.ICommonService;
 
 @Controller
 public class CommonController {
+	public static void main(String[] args) {
 	@Autowired
 	public ICommonService iCommonService;
 	
@@ -161,5 +162,6 @@ public class CommonController {
 		mav.setViewName("common/sample");
 
 		return mav;
+	}
 	}
 }
