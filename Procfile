@@ -1,1 +1,1 @@
-web: java -Dserver.port=$PORT $JAVA_OPTS -Dfile.encoding=UTF-8 -jar target/ibk-1.0.0.war
+web: java -Dserver.port=$PORT $JAVA_OPTS -Dfile.encoding=UTF-8 -jar target/ibk-1.0.0.war mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc6 -Dversion=11.2.0.3 -Dpackaging=jar -Dfile=<Path where the jar is, example downloads>/ojdbc6.jar -DgeneratePom=true
