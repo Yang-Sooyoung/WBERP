@@ -19,9 +19,18 @@ import com.wberp.ibk.exception.NotAllowException;
 import com.wberp.ibk.util.Utils;
 import com.wberp.ibk.web.common.service.ICommonService;
 
+@SpringBootApplication
 @Controller
-public class CommonController {
-	public static void main(String[] args) {}
+public class CommonController extends SpringBootServletInitializer {
+    public static void main(String[] args) {
+        SpringApplication application = new SpringApplication(CommonController.class);
+        application.run(args);
+    }
+    
+    @Override
+    protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
+        return application.sources(Application.class);
+    }
 	@Autowired
 	public ICommonService iCommonService;
 	
