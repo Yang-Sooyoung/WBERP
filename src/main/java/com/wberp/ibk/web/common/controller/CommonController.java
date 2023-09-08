@@ -21,10 +21,10 @@ import com.wberp.ibk.web.common.service.ICommonService;
 
 @Controller
 public class CommonController {
-	public static void main(String[] args) {}
+	
 	@Autowired
 	public ICommonService iCommonService;
-	
+	public static void main(String[] args) {
 	@RequestMapping(value = "/header")
 	public ModelAndView header(ModelAndView mav) {
 		mav.setViewName("common/header");
@@ -163,5 +163,6 @@ public class CommonController {
 
 		return mav;
 	}
+}
 	
 }
