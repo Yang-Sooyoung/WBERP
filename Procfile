@@ -1,1 +1,1 @@
-web: java -jar /target/ibk.war
+web: java -jar target/ibk.war
