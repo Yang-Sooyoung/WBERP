@@ -1,1 +1,1 @@
-web: java -Dserver.port=$PORT $JAVA_OPTS -Dfile.encoding=UTF-8 -jar target/ibk-1.0.0.war
+web: cd /src/main/java/com/wberp/ibk/web/common/controller/ && java -cp target/classes: com.wberp.ibk.web.common.controller.CommonController
