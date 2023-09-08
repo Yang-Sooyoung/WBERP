@@ -20,7 +20,7 @@ import com.wberp.ibk.util.Utils;
 import com.wberp.ibk.web.common.service.ICommonService;
 
 @Controller
-public class CommonController 
+public class CommonController {
 	
 	@Autowired
 	public ICommonService iCommonService;
