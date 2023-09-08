@@ -1,1 +1,1 @@
-war: deploy ibk.war --app wberp
+web: java -jar /target/ibk.war
