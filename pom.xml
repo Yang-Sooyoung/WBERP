@@ -198,10 +198,10 @@
 		    <version>11.2.0.3</version>
 		    <scope>system</scope>
 		    <systemPath>${project.basedir}/src/main/webapp/WEB-INF/lib/ojdbc6-11.2.0.3.jar</systemPath>
-		</dependency>
+		</dependency>-->
 		
 		<!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/sqljdbc4 -->
-		<dependency>
+		<!--<dependency>
 		    <groupId>com.microsoft.sqlserver</groupId>
 		    <artifactId>sqljdbc4</artifactId>
 		    <version>4.2.jar</version>
