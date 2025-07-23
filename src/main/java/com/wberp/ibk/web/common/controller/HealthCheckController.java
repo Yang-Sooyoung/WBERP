@@ -1,4 +1,4 @@
-package com.yourcompany.project.controller;
+package com.wberp.ibk.web.common.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
