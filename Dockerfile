@@ -10,8 +10,14 @@ RUN mvn clean package -DskipTests
 # 2단계: Tomcat에 배포
 FROM tomcat:9.0-jdk8-openjdk
 
-# JVM 메모리 옵션 설정
-ENV JAVA_OPTS="-Xms256m -Xmx512m"
+ENV JAVA_OPTS="-Xms128m -Xmx512m -XX:+UseSerialGC"
+
+# 불필요한 디폴트 앱 제거
+RUN rm -rf /usr/local/tomcat/webapps/* \
+           /usr/local/tomcat/logs/* \
+           /usr/local/tomcat/temp/* \
+           /usr/local/tomcat/work/* \
+           /usr/local/tomcat/webapps.dist
 
 COPY --from=build /app/target/ibk-1.0.0.war /usr/local/tomcat/webapps/ROOT.war
 
