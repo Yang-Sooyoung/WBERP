@@ -126,9 +126,7 @@ $(document).ready(function() {
 						$("#locationForm").submit();
 					} else if(result.res == "FAILED") {
 						makeAlert(1, "로그인 실패", "아이디나 비밀번호가 틀렸습니다.", null);
-					} else {
-						makeAlert(1, "로그인 경고", "로그인 체크 중 문제가 발생하였습니다.", null);
-					}
+					} 
 				},
 				error : function(request, status, error) {
 					console.log("status : " + request.status);
