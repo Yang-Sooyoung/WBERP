@@ -10,6 +10,9 @@ RUN mvn clean package -DskipTests
 # 2단계: Tomcat에 배포
 FROM tomcat:9.0-jdk8-openjdk
 
+# JVM 메모리 옵션 설정
+ENV JAVA_OPTS="-Xms256m -Xmx512m"
+
 COPY --from=build /app/target/ibk-1.0.0.war /usr/local/tomcat/webapps/ROOT.war
 
 EXPOSE 8080
