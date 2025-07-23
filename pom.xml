@@ -185,10 +185,16 @@
 			<version>4.3.4.RELEASE</version>
 		</dependency>
 		
-		<dependency>
+		<!--<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 			<version>5.1.35</version>
+		</dependency>-->
+
+		<dependency>
+		  <groupId>com.oracle.database.jdbc</groupId>
+		  <artifactId>ojdbc8</artifactId>
+		  <version>19.8.0.0</version>
 		</dependency>
 		
 		<!-- https://mvnrepository.com/artifact/oracle/ojdbc6 -->
