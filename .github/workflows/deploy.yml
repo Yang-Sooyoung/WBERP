@@ -1,0 +1,43 @@
+name: Build & Deploy to Oracle VM
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Java & Maven
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+
+    - name: Build WAR
+      run: mvn clean package
+
+    - name: Copy to Oracle VM via SCP
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.ORACLE_VM_HOST }}
+        username: ubuntu
+        key: ${{ secrets.ORACLE_VM_SSH_KEY }}
+        source: "./target/WBERP.war"
+        target: "~/wberp/"
+
+    - name: Deploy with SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.ORACLE_VM_HOST }}
+        username: ubuntu
+        key: ${{ secrets.ORACLE_VM_SSH_KEY }}
+        script: |
+          cd ~/wberp
+          docker stop wberp || true
+          docker rm wberp || true
+          docker build -t wberp .
+          docker run -d --name wberp -p 80:8080 wberp
