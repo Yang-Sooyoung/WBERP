@@ -1,26 +1,14 @@
-# 1단계: Maven 빌드
-FROM maven:3.8.6-openjdk-8 AS build
+# Tomcat + JDK11 기반 이미지 사용
+FROM tomcat:9.0-jdk11
 
-WORKDIR /app
-COPY pom.xml .
-COPY src ./src
+# 기존 webapps 제거 (필요 시)
+RUN rm -rf /usr/local/tomcat/webapps/*
 
-RUN mvn clean package -DskipTests
+# WAR 파일 복사
+COPY target/WBERP.war /usr/local/tomcat/webapps/ROOT.war
 
-# 2단계: Tomcat에 배포
-FROM tomcat:9.0-jdk8-openjdk
-
-ENV JAVA_OPTS="-Xms128m -Xmx512m -XX:+UseSerialGC"
-
-# 불필요한 디폴트 앱 제거
-RUN rm -rf /usr/local/tomcat/webapps/* \
-           /usr/local/tomcat/logs/* \
-           /usr/local/tomcat/temp/* \
-           /usr/local/tomcat/work/* \
-           /usr/local/tomcat/webapps.dist
-
-COPY --from=build /app/target/ibk-1.0.0.war /usr/local/tomcat/webapps/ROOT.war
-
+# 포트 설정
 EXPOSE 8080
 
+# 톰캣 실행
 CMD ["catalina.sh", "run"]
